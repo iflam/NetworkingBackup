@@ -29,12 +29,11 @@ int main(int argc, char** argv) {
 	if(connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) < 0)
 		err_quit("connect error\n");
 
-	while(n = read(sockfd, recvline, MAXLINE) > 0) {
+	while((n = read(sockfd, recvline, MAXLINE)) > 0) {
 		printf("%d bytes read:\n", n);
 		recvline[n] = 0; 
 		if(fputs(recvline, stdout) == EOF) 
 			err_sys("EOF error\n");
-		printf("\n");
 	}
 	if(n < 0)
 		err_sys("read error\n");
