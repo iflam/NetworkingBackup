@@ -1,6 +1,8 @@
 #pragma once
 #include<stdarg.h>
 
+#define NAME_LEN_ERR -1
+
 void err_quit(const char* fmt, ...) {
 	va_list ap;
 
