@@ -1,66 +1,79 @@
-#include<stdlib.h>
-#include<stdio.h>
-#include<string.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/socket.h>
-#include<sys/select.h>
-#include<arpa/inet.h>
-
-#include "consts.h"
-#include "err_msg.h"
+#include "incl.h"
 #include "client.h"
 
 int main(int argc, char** argv) {
 	int sockfd;
-	char sendline[MAXLINE+1], recvline[MAXLINE+1];
+	char linebuf[MAXLINE+1];
 	char *username;
+	int client2chat[2], chat2client[2]; // pipes
 
-	if(argc != ARGS)
+	pipe(client2chat);
+	pipe(chat2client);
+
+	if(argc != ARGC)
 		err_quit("usage: client <Name> <IPaddress> <port>\n");
 
-	Setusername(username, argv[NAME_ARG]);
+	if(strlen(argv[NAME_ARG]) > MAXNAME)
+		err_quit("username too long\n");
+	username = argv[NAME_ARG];
 
 	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
 		err_sys("socket error\n");
 
 	ConnectSocket(sockfd, argv);
 
-	fd_set rfds, rfds_init;
+	pid_t pid = fork();
 
-	FD_ZERO(&rfds_init);
-	FD_SET(fileno(stdin), &rfds_init);
-	FD_SET(sockfd, &rfds_init);
+	if(pid == 0) { // child (chat window)
+		CreateChatWindow(client2chat, chat2client);
+	}
+	else { // parent (client) -> the whole select schpiel
+		fd_set rfds, rfds_init;
 
-	while(1) {
-		rfds = rfds_init;
-		if(select(sockfd+1, &rfds, NULL, NULL, NULL) == -1)
-			err_sys("select error\n");
-		if(FD_ISSET(fileno(stdin), &rfds)) { 
-			fgets(sendline, MAXLINE, stdin); // read stdin
-			write(sockfd, sendline, strlen(sendline)); // send to sockfd
-		}
-		if(FD_ISSET(sockfd, &rfds)) { 
-			if(read(sockfd, recvline, MAXLINE) == 0)
-				err_quit("EOF\n"); 
-			fputs(recvline, stdout);
+		FD_ZERO(&rfds_init);
+		FD_SET(fileno(stdin), &rfds_init); // prepare to read from stdin
+		FD_SET(sockfd, &rfds_init); // prepare to read from server
+		FD_SET(chat2client[READ], &rfds_init); // prepare to read from chat window
+
+		int maxfd = max(sockfd, chat2client[READ]);
+
+		int readcount;
+		while(1) {
+			rfds = rfds_init;
+			if(select(maxfd+1, &rfds, NULL, NULL, NULL) == -1)
+				err_sys("select error\n");
+			/*if(FD_ISSET(fileno(stdin), &rfds)) { 
+				fgets(sendline, MAXLINE, stdin); // read stdin
+				write(sockfd, sendline, strlen(sendline)); // send to server
+			}*/
+			if(FD_ISSET(sockfd, &rfds)) { 
+				if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
+					err_quit("EOF\n"); 
+				linebuf[readcount] = 0; // null-terminate
+				write(client2chat[WRITE], linebuf, strlen(linebuf)); // write to chat window
+			}
+			if(FD_ISSET(chat2client[READ], &rfds)) {
+				if((readcount = read(chat2client[READ], linebuf, MAXLINE)) == 0) // read from chat window
+					err_quit("EOF\n");
+				linebuf[readcount] = 0; // null-terminate
+				write(sockfd, linebuf, strlen(linebuf)); // write to server 
+			}
 		}
 	}
-
-	exit(0);
 }
 
-int setusername(char *dest, char *src) {
-	if(strlen(src) > MAXNAME) 
-		return NAME_LEN_ERR;
-	dest = src;
-	return 0;
-}
-void Setusername(char *dest, char *src) {
-	switch(setusername(dest, src)) {
-		case NAME_LEN_ERR:
-			err_quit("Name too long. Must be <%d chars", MAXNAME);
-	}
+void CreateChatWindow(int client2chat[2], int chat2client[2]) {
+	char *args[6];
+	args[0] = "xterm";
+	args[1] = "-e";
+	args[2] = "./chat";
+	args[3] = calloc(FD_SZ_CHAR+1, sizeof(char));
+	args[4] = calloc(FD_SZ_CHAR+1, sizeof(char));
+	args[5] = NULL;
+	snprintf(args[3], FD_SZ_CHAR, "%d", client2chat[READ]); 
+	snprintf(args[4], FD_SZ_CHAR, "%d", chat2client[WRITE]);
+	if(execvp(args[0], args) < 0) 
+		perror("exec error"); 
 }
 
 void ConnectSocket(int sockfd, char **argv) {
@@ -75,4 +88,9 @@ void ConnectSocket(int sockfd, char **argv) {
 
 	if(connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) < 0)
 		err_quit("connect error\n");
+}
+
+int max(int a, int b) {
+	if(a > b) return a;
+	return b;
 }

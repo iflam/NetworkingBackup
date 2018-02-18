@@ -10,3 +10,5 @@
 #include<arpa/inet.h>
 
 #include "errmsg.h"
+
+int max(int a, int b);
