@@ -58,7 +58,8 @@ int main(int argc, char** argv) {
 		    		exit(0);
 		    		break;
 		    	case LIST:
-		    		puts("Here are all the users:");
+		    		strcpy(linebuf, "LISTU\r\n\r\n");
+		    		write(sockfd, linebuf, sizeof(linebuf));
 		    		//send request for users to server
 		    		break;
 		    	case CHAT:
@@ -100,16 +101,18 @@ int main(int argc, char** argv) {
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
 		    //check for what it returns
-		    server_cmd* command = parse_server_msg(linebuf);
-
+		    server_cmd* command = parse_server_msg(linebuf, (Server_cmd_type)NULL);
 		    //Switch based on command type
 		    switch(command->cmdt){
 		    	case UTSIL:
 		    		puts("Currently active users:");
-		    		char** curr_user = command->users;
-		    		while(*curr_user != "\0"){
-		    			printf("%s ",*curr_user);
-		    			curr_user++;
+		    		printf("%s",command->msg);
+		    		char* i = strstr(linebuf,ENDLINE);
+		    		while(i == NULL){
+		    			memset(linebuf,0,sizeof(linebuf));
+		    			read(sockfd,linebuf,MAXLINE);
+		    			printf("%s",linebuf);
+		    			i = strstr(linebuf,ENDLINE);
 		    		}
 		    		printf("\n");
 		    		break;
@@ -182,12 +185,12 @@ char* makeTo(cmd* command){
 	strcat(string,command->to);
 	strcat(string," ");
 	strcat(string,command->msg);
-	strcat(string,"\r\n\r\n");
+	strcat(string,ENDLINE);
 	return string;
 
 }
 
-server_cmd* parse_server_msg(char* in){
+server_cmd* parse_server_msg(char* in, Server_cmd_type in_type){
 	server_cmd* curr_cmd = (server_cmd*)malloc(sizeof(server_cmd));
 	char* curr_token = (char*)malloc((strlen(in)+1)*sizeof(char));
 	memset(curr_token, 0, sizeof(char));
@@ -196,6 +199,7 @@ server_cmd* parse_server_msg(char* in){
 	curr_cmd->to = NULL;
 	curr_cmd->msg = NULL;
 	curr_cmd->users = NULL;
+	curr_cmd->cmdt = in_type;
 	while(*currChar != '\0'){
 		while(*currChar == ' '){
 			//go until no more spaces
@@ -208,8 +212,7 @@ server_cmd* parse_server_msg(char* in){
 
 		if(curr_cmd->cmdt == UTSIL){
 			char* string = strdup(currChar);
-			char** users = make_users(string);
-			curr_cmd->users = users;
+			curr_cmd->msg = string;
 			return curr_cmd;
 		}
 
@@ -273,18 +276,18 @@ server_cmd* parse_server_msg(char* in){
 	return NULL;
 }
 
-char** make_users(char* string){
-	char** users = malloc(strlen(string)*sizeof(char*)+sizeof(NULL));
-	char* user = strtok(string," ");
-	users[0] = user;
-	int i = 1;
-	while((user = strtok(NULL," ")) != NULL){
-		users[i] = user;
-		i++;
-	}
-	users[i] = "\0";
-	return users;
-}
+// char** make_users(char* string){
+// 	char** users = malloc(strlen(string)*sizeof(char*)+sizeof(NULL));
+// 	char* user = strtok(string," ");
+// 	users[0] = user;
+// 	int i = 1;
+// 	while((user = strtok(NULL," ")) != NULL){
+// 		users[i] = user;
+// 		i++;
+// 	}
+// 	users[i] = "\0";
+// 	return users;
+// }
 
 cmd* parse_cmsg(char* in){
 	cmd* curr_cmd = (cmd*)malloc(sizeof(cmd));

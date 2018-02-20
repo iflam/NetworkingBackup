@@ -1,11 +1,12 @@
 #pragma once
 
 #define ARGC 4
-#define MAXLINE 4096
+#define MAXLINE 30
 #define MAXNAME 10
 #define NAME_ARG 1
 #define IP_ARG 2
 #define PORT_ARG 3
+#define ENDLINE "\r\n\r\n"
 
 #define READ 0
 #define WRITE 1
@@ -40,5 +41,5 @@ typedef struct {
     char** users; //NULL when not UTSIL
 } server_cmd;
 
-server_cmd* parse_server_msg(char* in);
+server_cmd* parse_server_msg(char* in, Server_cmd_type type);
 char** make_users(char* string);
