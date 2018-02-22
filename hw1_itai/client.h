@@ -41,6 +41,8 @@ void handlefrom(int sockfd);
 
 void replyloop(int sockfd, char *cmd);
 
+char *strrev(char *str);
+
 typedef struct chat chat;
 struct chat{
     char* name;

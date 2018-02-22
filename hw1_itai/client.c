@@ -8,6 +8,8 @@ int main(int argc, char** argv) {
 	int sockfd;
 	char *username;
 	int client2chat[2], chat2client[2]; // pipes
+	pipe(client2chat);
+	pipe(chat2client);
 
 	if(argc != ARGC)
 		err_quit("usage: client <Name> <IPaddress> <port>\n");
@@ -42,8 +44,9 @@ int main(int argc, char** argv) {
 		    if((readcount = read(fileno(stdin), linebuf, MAXLINE)) == 0) // read from stdin
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
-			//char *cmd = strtok(linebuf, " ");
-//			replyloop(sockfd, cmd);
+			puts(linebuf);
+			//char *comd = strtok(linebuf, " ");
+			//replyloop(sockfd, comd);
 		    cmd* command = parse_cmsg(linebuf);
 		    switch(command->cmdt){
 		    	case HELP:
@@ -84,23 +87,23 @@ int main(int argc, char** argv) {
 		    	default:
 		    		puts("That is not a valid command");
 		    		break;
-		    } //end of switch
+		    } //end of switch*/
 	    } //end of STDIN if
 
 	    if(FD_ISSET(sockfd, &rfds)) { 
 		    if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
-			char *cmd = strtok(linebuf, " ");
-			puts(cmd);
+			//char *cmd = strtok(linebuf, " ");
+			//puts(cmd);
 			//replyloop(cmd);
-			if(strcmp(cmd, "FROM") == 0) { // handle FROM
+			/*if(strcmp(cmd, "FROM") == 0) { // handle FROM
 				handlefrom(sockfd);
-			}
+			}*/
 			//else
 			//	err_quit("Garbage, wasn't expecting %s\n", cmd);
 		    //check for what it returns
-		    /*server_cmd* command = parse_server_msg(linebuf, (Server_cmd_type)NULL);
+		    server_cmd* command = parse_server_msg(linebuf, (Server_cmd_type)NULL);
 		    //Switch based on command type
 		    switch(command->cmdt){
 				case OT:
@@ -122,7 +125,7 @@ int main(int argc, char** argv) {
 		    		puts("Invalid server command. Quitting");
 		    		exit(0);
 		    		break;
-		    }*/
+		    }
 		    //write(client2chat[WRITE], linebuf, strlen(linebuf)); // write to chat window
 	    }	
 
@@ -473,14 +476,14 @@ void handlefrom(int sockfd) {
 	puts(msg); // print msg
 }
 
-/*void replyloop(int sockfd, char *cmd) {
+void replyloop(int sockfd, char *comd) {
 	int n = 0;
 	while(1) {
-		write(sockfd, cmd, strlen(cmd)); // send cmd to server
+		write(sockfd, comd, strlen(comd)); // send cmd to server
 		n = read(sockfd, recvbuf, MAXLINE); // read reply from server
 		recvbuf[n] = 0;
 		char *reply = strtok(recvbuf, " ");
-		if(strcmp(reply, replymap(cmd)) == 0) { // if received expected reply
+		if(strcmp(reply, strrev(comd)) == 0) { // if received expected reply
 			recvbuf[strlen(reply)] = ' ';
 			puts(recvbuf);
 			return;
@@ -490,8 +493,24 @@ void handlefrom(int sockfd) {
 			puts(recvbuf);
 		}
 		else {
-			puts("Garbage, unexpected reply from server %s\n", reply);
+			err_quit("Garbage, unexpected reply from server %s\n", reply);
 		}
 	}
-}*/
+}
 
+
+char *strrev(char *str)
+{
+    int i = strlen(str) - 1, j = 0;
+
+    char ch;
+    while (i > j)
+    {
+        ch = str[i];
+        str[i] = str[j];
+        str[j] = ch;
+        i--;
+        j++;
+    }
+    return str;
+}
