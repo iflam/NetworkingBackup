@@ -1,12 +1,13 @@
 #include "incl.h"
 #include "client.h"
 
+char linebuf[MAXLINE+1], sendbuf[MAXLINE+1], recvbuf[MAXLINE+1];
+chat* chatlist = NULL;
+
 int main(int argc, char** argv) {
 	int sockfd;
-	char linebuf[MAXLINE+1];
 	char *username;
 	int client2chat[2], chat2client[2]; // pipes
-	chat* chatlist = NULL;
 
 	if(argc != ARGC)
 		err_quit("usage: client <Name> <IPaddress> <port>\n");
@@ -20,7 +21,8 @@ int main(int argc, char** argv) {
 
 	ConnectSocket(sockfd, argv);
 
-	// parent (client) -> the whole select schpiel
+	Login(sockfd, username);
+
     fd_set rfds, rfds_init;
 
     FD_ZERO(&rfds_init);
@@ -40,27 +42,18 @@ int main(int argc, char** argv) {
 		    if((readcount = read(fileno(stdin), linebuf, MAXLINE)) == 0) // read from stdin
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
+			//char *cmd = strtok(linebuf, " ");
+//			replyloop(sockfd, cmd);
 		    cmd* command = parse_cmsg(linebuf);
 		    switch(command->cmdt){
 		    	case HELP:
-		    		puts("Test Help Message");
+					printhelp();
 		    		break;
 		    	case LOG:
-		    		puts("goodbye");
-		    		strcpy(linebuf,"BYE\r\n\r\n");
-		    		write(sockfd, linebuf, strlen(linebuf));
-		    		chat* curr_chat = chatlist;
-		    		while(curr_chat){
-		    			kill(curr_chat->pid,SIGKILL);
-		    			curr_chat = curr_chat->next;
-		    		}
-		    		//send close to server
-		    		exit(0);
-		    		break;
-		    	case LIST:
-		    		strcpy(linebuf, "LISTU\r\n\r\n");
-		    		write(sockfd, linebuf, sizeof(linebuf));
-		    		//send request for users to server
+					Logout(sockfd, username);
+					break;
+				case LIST:
+					sendlist(sockfd);
 		    		break;
 		    	case CHAT:
 		    		//fork here
@@ -72,7 +65,7 @@ int main(int argc, char** argv) {
 		    			CreateChatWindow(client2chat,chat2client);
 		    		}
 		    		else{ //parent
-						chat* t = malloc(sizeof(chatlist));
+						chat* t = malloc(sizeof(chatlist)); // TODO: wha?
 		    			t->name = command->to;
 		    			t->readfd = chat2client[READ];
 		    			t->writefd = client2chat[WRITE];
@@ -85,14 +78,12 @@ int main(int argc, char** argv) {
 		    			memset(linebuf,0,sizeof(linebuf));
 		    			strcpy(linebuf,to_send);
 		    			write(sockfd, linebuf, strlen(linebuf));
+						blockuntilOT(sockfd);
 		    		}
 		    		break;
 		    	default:
 		    		puts("That is not a valid command");
 		    		break;
-
-
-
 		    } //end of switch
 	    } //end of STDIN if
 
@@ -100,10 +91,21 @@ int main(int argc, char** argv) {
 		    if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
+			char *cmd = strtok(linebuf, " ");
+			puts(cmd);
+			//replyloop(cmd);
+			if(strcmp(cmd, "FROM") == 0) { // handle FROM
+				handlefrom(sockfd);
+			}
+			//else
+			//	err_quit("Garbage, wasn't expecting %s\n", cmd);
 		    //check for what it returns
-		    server_cmd* command = parse_server_msg(linebuf, (Server_cmd_type)NULL);
+		    /*server_cmd* command = parse_server_msg(linebuf, (Server_cmd_type)NULL);
 		    //Switch based on command type
 		    switch(command->cmdt){
+				case OT:
+					puts("read OT");
+					break;
 		    	case UTSIL:
 		    		puts("Currently active users:");
 		    		printf("%s",command->msg);
@@ -120,7 +122,7 @@ int main(int argc, char** argv) {
 		    		puts("Invalid server command. Quitting");
 		    		exit(0);
 		    		break;
-		    }
+		    }*/
 		    //write(client2chat[WRITE], linebuf, strlen(linebuf)); // write to chat window
 	    }	
 
@@ -174,6 +176,75 @@ void ConnectSocket(int sockfd, char **argv) {
 int max(int a, int b) {
 	if(a > b) return a;
 	return b;
+}
+
+void Login(int sockfd, char *username) {
+	sendme2u(sockfd);
+	readme2u(sockfd);
+	sendiam(sockfd, username);
+	readuntilend(sockfd, linebuf);
+	puts(linebuf);
+	if(strcmp(linebuf, _ETAKEN) == 0)
+		err_quit("username taken\n");
+	if(strcmp(linebuf, _MAI) != 0)
+		err_quit("read garbage, expected MAI\n");
+	//readmai(sockfd);
+	readmotd(sockfd);
+}
+
+void readuntil(int sockfd, char *buf, char *str) {
+	memset(buf, 0, strlen(str));
+	int n = 0;
+	while(strcmp(str, buf) != 0) {
+		n += read(sockfd, &buf[n], strlen(str)-n);
+		buf[n] = 0;
+		if(n > strlen(str)) {
+			err_quit("Read garbage while reading until %s\n", str);
+		}
+	}
+}
+void readuntilend(int sockfd, char *buf) {
+	int n = strlen(buf);
+	memset(&buf[n], 0, MAXLINE-n);
+	while(strcmp(&buf[n-strlen(ENDLINE)], ENDLINE) != 0) {
+		n += read(sockfd, &buf[n], MAXLINE-strlen(buf)); // TODO: check bounds
+		buf[n] = 0;
+	}
+}
+void sendme2u(int sockfd) {
+	int hello_len = strlen(_ME2U);
+	linebuf[hello_len] = 0;
+	strcat(linebuf, _ME2U);
+	write(sockfd, linebuf, strlen(linebuf)); 
+}
+void readme2u(int sockfd) {
+	int hello_len = strlen(_U2EM);
+	readuntil(sockfd, linebuf, _U2EM);
+	linebuf[hello_len] = 0;
+	fputs(linebuf, stdout);
+}
+void sendiam(int sockfd, char *username) {
+	memset(linebuf, 0, strlen(_IAM)+strlen(username)+strlen(ENDLINE)+1);
+	strcpy(linebuf, _IAM);
+	strcat(linebuf, username);
+	strcat(linebuf, ENDLINE);
+	write(sockfd, linebuf, strlen(linebuf));
+	memset(linebuf, 0, strlen(linebuf));
+}
+void readmai(int sockfd) {
+	readuntil(sockfd, linebuf, _MAI);
+	printf("read mai\n");
+}
+void readmotd(int sockfd) {
+	readuntil(sockfd, linebuf, _MOTD);
+	printf("read motd\n");
+	readuntilend(sockfd, linebuf);
+	printf("read end\n");
+	fputs(&linebuf[strlen(_MOTD)], stdout);
+}
+
+void printhelp() {
+	printf("/help\n/chat <to> <msg>\n/listu\tlist users\n/logout\n");
 }
 
 typedef struct chat chat;
@@ -354,3 +425,73 @@ cmd* parse_cmsg(char* in){
 	free(in_msg);
 	return NULL;
 }
+
+void Logout(int sockfd, char *username) {
+	puts("goodbye");
+	strcpy(linebuf, _BYE);
+	write(sockfd, linebuf, strlen(linebuf));
+	chat* curr_chat = chatlist;
+	while(curr_chat){
+		kill(curr_chat->pid,SIGKILL);
+		curr_chat = curr_chat->next;
+	}
+	//send close to server
+	exit(0);
+}
+
+void sendlist(int sockfd) {
+	strcpy(linebuf, _LISTU);
+	linebuf[strlen(_LISTU)] = 0;
+	write(sockfd, linebuf, sizeof(linebuf));
+	//send request for users to server
+}
+
+void blockuntilOT(int sockfd) {
+	while(1) {
+		read(sockfd, linebuf, MAXLINE);
+		char *cmd = strtok(linebuf, " ");
+		if(strcmp(cmd, "OT")) {
+			puts(linebuf);
+			return;
+		}
+		else if(strcmp(cmd, "FROM")) {
+			puts(linebuf);
+			// reply MORF
+		}
+		else 
+			err_quit("received garbage, expected OT or FROM\n");
+	}
+}
+
+void handlefrom(int sockfd) {
+	char *user = strtok(NULL, " ");
+	char *msg = strtok(NULL, " ");
+	strcpy(sendbuf, "MORF "); // reply MORF
+	strcat(sendbuf, user);
+	strcat(sendbuf, ENDLINE);
+	write(sockfd, sendbuf, strlen(sendbuf));
+	puts(msg); // print msg
+}
+
+/*void replyloop(int sockfd, char *cmd) {
+	int n = 0;
+	while(1) {
+		write(sockfd, cmd, strlen(cmd)); // send cmd to server
+		n = read(sockfd, recvbuf, MAXLINE); // read reply from server
+		recvbuf[n] = 0;
+		char *reply = strtok(recvbuf, " ");
+		if(strcmp(reply, replymap(cmd)) == 0) { // if received expected reply
+			recvbuf[strlen(reply)] = ' ';
+			puts(recvbuf);
+			return;
+		}
+		else if(strcmp(reply, "FROM") == 0) { // if received message while waiting for reply
+			recvbuf[strlen(reply)] = ' ';
+			puts(recvbuf);
+		}
+		else {
+			puts("Garbage, unexpected reply from server %s\n", reply);
+		}
+	}
+}*/
+

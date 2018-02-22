@@ -1,0 +1,29 @@
+after login
+
+while(1)
+	read from server MAXLINE
+		if cmd != FROM 
+			err_quit	// not expecting anything from server if we haven't sent anything (FROMs are ok tho)
+		else 
+			reply MORF
+			print
+	read from stdin
+		write cmd to server
+		responseloop(cmd)
+	read from chat
+		write TO to server
+		responseloop(TO)
+
+responseloop(cmd):
+	while(1)
+		read response from server
+		if cmd == FROM 
+			reply MORF
+			print
+			continue
+		if reply == reply[cmd] 
+			print
+			break	
+		else
+			err_quit
+

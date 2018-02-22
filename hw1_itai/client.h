@@ -1,12 +1,20 @@
 #pragma once
 
 #define ARGC 4
-#define MAXLINE 30
+#define MAXLINE 1024 
 #define MAXNAME 10
 #define NAME_ARG 1
 #define IP_ARG 2
 #define PORT_ARG 3
 #define ENDLINE "\r\n\r\n"
+#define _ME2U "ME2U" ENDLINE
+#define _U2EM "U2EM" ENDLINE
+#define _IAM "IAM " 
+#define _ETAKEN "ETAKEN" ENDLINE
+#define _MAI "MAI" ENDLINE
+#define _MOTD "MOTD " 
+#define _LISTU "LISTU" ENDLINE
+#define _BYE "BYE" ENDLINE
 
 #define READ 0
 #define WRITE 1
@@ -15,6 +23,23 @@
 
 void ConnectSocket(int sockfd, char **argv);
 void CreateChatWindow(int client2chat[2], int chat2client[2]);
+
+void readuntil(int sockfd, char *buf, char *str);
+void readuntilend(int sockfd, char *buf);
+
+void Login(int sockfd, char *username);
+void Logout(int sockfd, char *username);
+void sendme2u(int sockfd);
+void readme2u(int sockfd);
+void sendiam(int sockfd, char *username);
+void readmai(int sockfd);
+void readmotd(int sockfd);
+void sendlist(int sockfd);
+void printhelp();
+void blockuntilOT(int sockfd);
+void handlefrom(int sockfd);
+
+void replyloop(int sockfd, char *cmd);
 
 typedef struct chat chat;
 struct chat{
@@ -43,3 +68,6 @@ typedef struct {
 
 server_cmd* parse_server_msg(char* in, Server_cmd_type type);
 char** make_users(char* string);
+
+enum replies          { TO_R, FROM_R, LISTU_R, IAM_R, BYE_R, ME2U_R };
+const char* reply[] = { "OT", "MORF", "UTSIL", "MAI", "EYB", "U2EM" };
