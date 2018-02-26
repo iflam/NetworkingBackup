@@ -15,6 +15,7 @@
 #define _MOTD "MOTD " 
 #define _LISTU "LISTU" ENDLINE
 #define _BYE "BYE" ENDLINE
+#define _UTSIL "UTSIL"
 
 #define READ 0
 #define WRITE 1
@@ -37,6 +38,7 @@ void readmotd(int sockfd);
 void sendlist(int sockfd);
 void printhelp();
 void blockuntilOT(int sockfd);
+void blockuntil(int sockfd, char *reply);
 void handlefrom(int sockfd);
 
 void replyloop(int sockfd, char *cmd);
@@ -58,7 +60,7 @@ typedef struct {
 	char* msg; //NULL when anything but CHAT
 } cmd;
 cmd* parse_cmsg(char* in);
-char* makeTo(cmd* command);
+char* makeTo(char *to, char *msg);
 
 typedef enum server_cmd_type{U2EM, ETAKEN, MAI, MOTD, UTSIL, FROM, OT, EDNE, EYB, UOFF} Server_cmd_type;
 typedef struct {

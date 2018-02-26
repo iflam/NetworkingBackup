@@ -41,56 +41,52 @@ int main(int argc, char** argv) {
 	    if(select(maxfd+1, &rfds, NULL, NULL, NULL) == -1)
 		    err_sys("select error\n");
 	    if(FD_ISSET(fileno(stdin), &rfds)) { 
+			puts("FD_ISSET(stdin)");
 		    if((readcount = read(fileno(stdin), linebuf, MAXLINE)) == 0) // read from stdin
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
-			puts(linebuf);
-			//char *comd = strtok(linebuf, " ");
-			//replyloop(sockfd, comd);
 		    cmd* command = parse_cmsg(linebuf);
-		    switch(command->cmdt){
-		    	case HELP:
+			switch(command->cmdt) {
+				case HELP:
 					printhelp();
-		    		break;
-		    	case LOG:
+					break;
+				case LOG: 
 					Logout(sockfd, username);
 					break;
 				case LIST:
 					sendlist(sockfd);
-		    		break;
-		    	case CHAT:
-		    		//fork here
-		    		printf("to: %s, msg: %s",command->to,command->msg);
-		    		pipe(client2chat);
+					break;
+				case CHAT:
+					pipe(client2chat);
 					pipe(chat2client);
-	    			pid_t pid = fork();
-		    		if(pid == 0){ //child
-		    			CreateChatWindow(client2chat,chat2client);
-		    		}
-		    		else{ //parent
-						chat* t = malloc(sizeof(chatlist)); // TODO: wha?
-		    			t->name = command->to;
-		    			t->readfd = chat2client[READ];
-		    			t->writefd = client2chat[WRITE];
-		    			t->next = chatlist;
-		    			t->pid = pid;
-		    			chatlist = t;
-		    			FD_SET(chat2client[READ], &rfds_init);
-		    			maxfd = max(maxfd,chat2client[READ]);
-		    			char* to_send = makeTo(command); //create TO <name> <msg>
-		    			memset(linebuf,0,sizeof(linebuf));
-		    			strcpy(linebuf,to_send);
-		    			write(sockfd, linebuf, strlen(linebuf));
-						blockuntilOT(sockfd);
-		    		}
-		    		break;
-		    	default:
-		    		puts("That is not a valid command");
-		    		break;
-		    } //end of switch*/
+					pid_t pid = fork();
+					if(pid == 0) { // child
+						CreateChatWindow(client2chat, chat2client);
+					}
+					else { // parent
+						chat* t = malloc(sizeof(chat)); // TODO: wha?  sizeof(chatlist)??
+						t->name = command->to;
+						t->readfd = chat2client[READ];
+						t->writefd = client2chat[WRITE];
+						t->next = chatlist;
+						t->pid = pid;
+						chatlist = t;
+						FD_SET(chat2client[READ], &rfds_init);
+						maxfd = max(maxfd,chat2client[READ]);
+						char* to_send = makeTo(command->to, command->msg); //create TO <name> <msg>
+						memset(linebuf,0,MAXLINE);
+						strcpy(linebuf,to_send);
+						write(sockfd, linebuf, strlen(linebuf));
+						blockuntil(sockfd, "OT");
+					}
+					break;
+				default:
+					err_quit("Invalid cmdt\n");
+			}
 	    } //end of STDIN if
 
 	    if(FD_ISSET(sockfd, &rfds)) { 
+			puts("FD_ISSET(sockfd)");
 		    if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
@@ -106,7 +102,7 @@ int main(int argc, char** argv) {
 		    server_cmd* command = parse_server_msg(linebuf, (Server_cmd_type)NULL);
 		    //Switch based on command type
 		    switch(command->cmdt){
-				case OT:
+				/*case OT:
 					puts("read OT");
 					break;
 		    	case UTSIL:
@@ -120,7 +116,7 @@ int main(int argc, char** argv) {
 		    			i = strstr(linebuf,ENDLINE);
 		    		}
 		    		printf("\n");
-		    		break;
+		    		break;*/
 		    	default:
 		    		puts("Invalid server command. Quitting");
 		    		exit(0);
@@ -132,15 +128,17 @@ int main(int argc, char** argv) {
 	    chat* curr_chat = chatlist;
 	    while(curr_chat){
 	    	if(FD_ISSET(curr_chat->readfd, &rfds)) {
+				puts("FD_ISSET(curr_chat->readfd)");
 			    if((readcount = read(curr_chat->readfd, linebuf, MAXLINE)) == 0) // read from chat window
 				    err_quit("EOF\n");
 			    linebuf[readcount] = 0; // null-terminate
 			    cmd* command = (cmd*)malloc(sizeof(cmd)); //utilize to and msg of command for makeTo() function
-			    command->to = curr_chat->name;
-			    command->msg = linebuf;
-			    char* to_send = makeTo(command);
+			    char *to = curr_chat->name;
+			    char *msg = linebuf;
+			    char* to_send = makeTo(to, msg);
 			    strcpy(linebuf,to_send);
 			    write(sockfd, linebuf, strlen(linebuf)); // write to server 
+				blockuntil(sockfd, "OT");
 			    free(command);
 	   		}
 	   		curr_chat = curr_chat->next;
@@ -209,7 +207,7 @@ void readuntil(int sockfd, char *buf, char *str) {
 void readuntilend(int sockfd, char *buf) {
 	int n = strlen(buf);
 	memset(&buf[n], 0, MAXLINE-n);
-	while(strcmp(&buf[n-strlen(ENDLINE)], ENDLINE) != 0) {
+	while(strcmp(&buf[n-strlen(ENDLINE)], ENDLINE) != 0) { // while buffer does not end in ENDLINE
 		n += read(sockfd, &buf[n], MAXLINE-strlen(buf)); // TODO: check bounds
 		buf[n] = 0;
 	}
@@ -240,9 +238,7 @@ void readmai(int sockfd) {
 }
 void readmotd(int sockfd) {
 	readuntil(sockfd, linebuf, _MOTD);
-	printf("read motd\n");
 	readuntilend(sockfd, linebuf);
-	printf("read end\n");
 	fputs(&linebuf[strlen(_MOTD)], stdout);
 }
 
@@ -252,88 +248,91 @@ void printhelp() {
 
 typedef struct chat chat;
 
-char* makeTo(cmd* command){
-	char* string = malloc((strlen(command->to)+strlen(command->msg))*sizeof(char) + 16);
+char* makeTo(char *to, char *msg){
+	char* string = malloc((strlen(to)+strlen(msg))*sizeof(char) + 16);
 	memset(string,0,sizeof(string));
 	strcat(string,"TO ");
-	strcat(string,command->to);
+	strcat(string,to);
 	strcat(string," ");
-	strcat(string,command->msg);
+	strcat(string,msg);
 	strcat(string,ENDLINE);
 	return string;
 
 }
 
-server_cmd* parse_server_msg(char* in, Server_cmd_type in_type){
+/* For reference:
+typedef enum server_cmd_type{U2EM, ETAKEN, MAI, MOTD, UTSIL, FROM, OT, EDNE, EYB, UOFF} Server_cmd_type;
+typedef struct {
+    enum server_cmd_type cmdt;
+    char* to; //NULL when not FROM or EDNE or UOFF or OT
+    char* msg; //NULL when not FROM or MOTD
+    char** users; //NULL when not UTSIL
+} server_cmd;
+ */
+server_cmd* parse_server_msg(char* in, Server_cmd_type in_type) { // TODO: can we remove 2nd arg?
 	server_cmd* curr_cmd = (server_cmd*)malloc(sizeof(server_cmd));
-	char* curr_token = (char*)malloc((strlen(in)+1)*sizeof(char));
-	memset(curr_token, 0, sizeof(char));
+	char* curr_token = (char*)malloc(strlen(in)+1);
 	int pos = 0;
 	char* currChar = in;
 	curr_cmd->to = NULL;
 	curr_cmd->msg = NULL;
 	curr_cmd->users = NULL;
 	curr_cmd->cmdt = in_type;
-	while(*currChar != '\0'){
-		while(*currChar == ' '){
-			//go until no more spaces
+	while(*currChar != '\0') {
+		memset(curr_token, 0, strlen(in)+1); // clear curr_token
+		while(*currChar == ' ') { // go until no more spaces
 			currChar++;
 		}
-
-		if(*currChar == '\0'){ //if end of line
+		if(*currChar == '\0') { // if end of line
 			break;
 		}
-
-		if(curr_cmd->cmdt == UTSIL){
+		if(curr_cmd->cmdt == UTSIL) {
 			char* string = strdup(currChar);
 			curr_cmd->msg = string;
 			return curr_cmd;
 		}
-
-		if(pos ==2 || curr_cmd->cmdt == MOTD){ //if reached 3rd section, it's just one remaining token.
+		if(pos == 2 || curr_cmd->cmdt == MOTD) { // if reached 3rd section, it's just one remaining token.
 			curr_cmd->msg = strdup(currChar);
 			free(curr_token);
 			return curr_cmd;
 		}
-
-		while(*currChar != ' ' && *currChar != '\n' && *currChar != '\0'){ //create token
+		while(*currChar != ' ' && *currChar != '\n' && *currChar != '\0') { // create token
 			strncat(curr_token,currChar,1);	
 			currChar++;
 		}
-
-		switch(pos){ //Depending on position, parse differently.
-			case 0:
-				if((strcmp(curr_token,"FROM"))==0){
+		switch(pos) { // Depending on position, parse differently.
+			case 0: // set cmdt
+				if(strcmp(curr_token,"FROM") == 0) {
 				 	curr_cmd->cmdt = FROM;
 				}
-				else if((strcmp(curr_token,"U2EM"))==0){
+				else if(strcmp(curr_token,"U2EM") == 0) {
 				 	curr_cmd->cmdt = U2EM;
 				 	return curr_cmd;
 				}
-				else if((strcmp(curr_token,"ETAKEN"))==0){
+				else if(strcmp(curr_token,"ETAKEN") == 0) {
 				 	curr_cmd->cmdt = ETAKEN;
 				 	return curr_cmd;
 				}
-				else if((strcmp(curr_token,"MAI"))==0){
+				else if(strcmp(curr_token,"MAI") == 0) {
 				 	curr_cmd->cmdt = MAI;
 				 	return curr_cmd;
 				}
-				else if((strcmp(curr_token,"MOTD"))==0){
+				else if(strcmp(curr_token,"MOTD") == 0) {
 				 	curr_cmd->cmdt = MOTD;
 				}
-				else if((strcmp(curr_token,"UTSIL"))==0){
+				else if(strcmp(curr_token,"UTSIL") == 0) {
 				 	curr_cmd->cmdt = UTSIL;
 				}
-				else if((strcmp(curr_token,"OT"))==0){
+				else if(strcmp(curr_token,"OT") == 0) {
 				 	curr_cmd->cmdt = OT;
 				}
-				else if((strcmp(curr_token,"EDNE"))==0){
+				else if(strcmp(curr_token,"EDNE") == 0) {
 				 	curr_cmd->cmdt = EDNE;
 				}
-				else if((strcmp(curr_token,"EYB"))==0){
+				else if(strcmp(curr_token,"EYB") == 0) {
 				 	curr_cmd->cmdt = EYB;
 				}
-				else if((strcmp(curr_token,"UOFF"))==0){
+				else if(strcmp(curr_token,"UOFF") == 0) {
 				 	curr_cmd->cmdt = UOFF;
 				}
 				break;
@@ -345,6 +344,7 @@ server_cmd* parse_server_msg(char* in, Server_cmd_type in_type){
 				return NULL;
 				break;
 		}
+		//pos++;
 	}
 	free(curr_token);
 	return NULL;
@@ -363,69 +363,74 @@ server_cmd* parse_server_msg(char* in, Server_cmd_type in_type){
 // 	return users;
 // }
 
+/* For reference:
+typedef struct {
+	enum cmd_type cmdt;
+	char* to; //NULL when anything but CHAT
+	char* msg; //NULL when anything but CHAT
+} cmd;
+*/
 cmd* parse_cmsg(char* in){
 	cmd* curr_cmd = (cmd*)malloc(sizeof(cmd));
-	char* in_msg = (char*)malloc((strlen(in)+1)*sizeof(char));
-	memset(in_msg, 0, sizeof(char));
+	char* in_msg = (char*)malloc((strlen(in)+1)); 
+	//memset(in_msg, 0, sizeof(char)); // wut
 	int pos = 0;
-	char* currChar = in;
-	while(*currChar != '\0'){
-		while(*currChar == ' '){
-			//go until no more spaces
+	char* currChar = in; // cursor
+	while(*currChar != '\0') {
+		memset(in_msg, 0, strlen(in)+1); // clear in_msg
+		while(*currChar == ' ') // go until no more spaces
 			currChar++;
-		}
 		if(*currChar == '\0')
 			break;
-
 		if(pos == 2){
 			curr_cmd->msg = strdup(currChar);
 			free(in_msg);
 			return curr_cmd;
 		}
-		while(*currChar != ' ' && *currChar != '\n' && *currChar != '\0'){
-			strncat(in_msg,currChar,1);	
+		while(*currChar != ' ' && *currChar != '\n' && *currChar != '\0'){ // go until whitespace or null
+			strncat(in_msg,currChar,1);	// fill in_msg
 			currChar++;
 		}
-
 		switch(pos){
-			case 0:
-				curr_cmd->to = NULL;
+			case 0: // set cmdt
+				curr_cmd->to = NULL; 
 				curr_cmd->msg = NULL;
-				 if((strcmp(in_msg,"/help"))==0){
+				 if(strcmp(in_msg,"/help") == 0){
 				 	curr_cmd->cmdt = HELP;
 				 }
-				 else if((strcmp(in_msg,"/logout")) == 0){
+				 else if(strcmp(in_msg,"/logout") == 0){
 				 	curr_cmd->cmdt = LOG;
 				 }
-				 else if((strcmp(in_msg,"/listu")) == 0){
+				 else if(strcmp(in_msg,"/listu") == 0){
 				 	curr_cmd->cmdt = LIST;
 				 }
-				 else if((strcmp(in_msg, "/chat")) == 0){
+				 else if(strcmp(in_msg, "/chat") == 0){
 				 	curr_cmd->cmdt = CHAT;
 				 }
 				 else
 				 	curr_cmd->cmdt = ERR;
-				 if(curr_cmd->cmdt != CHAT){
-				 	free(in_msg);
+				 if(curr_cmd->cmdt != CHAT){ // only chat requires to and msg
+				 	free(in_msg); // nice
 				 	return curr_cmd;
 				 }
 				 pos++;
 				break;
-			case 1:
+			case 1: // set to
 				curr_cmd->to = strdup(in_msg);
 				pos++;
 				break;
-			case 2:
-				curr_cmd->msg = strdup(in_msg);
+			case 2: // set msg // TODO: this code is unreachable??
+				curr_cmd->msg = strdup(in_msg); // TODO: this is incorrect for msg with spaces
 				break;
 			default:
 				return NULL;
 				break;
 		}
 
-		memset(in_msg, 0, sizeof(char));
+		// memset(in_msg, 0, sizeof(char)); // wut
 	}
-	free(in_msg);
+	free(in_msg); // code is unreachable (or should be)
+	err_quit("Error: unexpected execution flow in parse_cmsg\n");
 	return NULL;
 }
 
@@ -442,27 +447,47 @@ void Logout(int sockfd, char *username) {
 	exit(0);
 }
 
+//send request for users to server
 void sendlist(int sockfd) {
-	strcpy(linebuf, _LISTU);
-	linebuf[strlen(_LISTU)] = 0;
-	write(sockfd, linebuf, sizeof(linebuf));
-	//send request for users to server
+	strcpy(sendbuf, _LISTU);
+	sendbuf[strlen(_LISTU)] = 0;
+	write(sockfd, sendbuf, MAXLINE);
+	blockuntil(sockfd, "UTSIL");
 }
 
 void blockuntilOT(int sockfd) {
 	while(1) {
 		read(sockfd, linebuf, MAXLINE);
 		char *cmd = strtok(linebuf, " ");
-		if(strcmp(cmd, "OT")) {
+		if(strcmp(cmd, "OT")==0) {
 			puts(linebuf);
 			return;
 		}
-		else if(strcmp(cmd, "FROM")) {
+		else if(strcmp(cmd, "FROM")==0) {
 			puts(linebuf);
 			// reply MORF
 		}
 		else 
 			err_quit("received garbage, expected OT or FROM\n");
+	}
+}
+void blockuntil(int sockfd, char *reply) {
+	while(1) {
+		int n = read(sockfd, recvbuf, MAXLINE);
+		recvbuf[n] = 0;
+		char *cmd = strtok(recvbuf, " ");
+		if(strcmp(cmd, reply) == 0) { // if got expected reply
+//			puts(&recvbuf[strlen(cmd)+1]);
+			readuntilend(sockfd, &recvbuf[strlen(cmd)+1]);
+			puts(&recvbuf[strlen(cmd)+1]);
+			return;
+		}
+		else if(strcmp(cmd, "FROM") == 0) {
+			puts(recvbuf);
+			// TODO: reply MORF
+		}
+		else 
+			err_quit("received garbage, expected or FROM\n");
 	}
 }
 
@@ -478,8 +503,8 @@ void handlefrom(int sockfd) {
 
 void replyloop(int sockfd, char *comd) {
 	int n = 0;
+	write(sockfd, comd, strlen(comd)); // send cmd to server
 	while(1) {
-		write(sockfd, comd, strlen(comd)); // send cmd to server
 		n = read(sockfd, recvbuf, MAXLINE); // read reply from server
 		recvbuf[n] = 0;
 		char *reply = strtok(recvbuf, " ");

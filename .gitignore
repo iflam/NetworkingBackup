@@ -1,6 +1,7 @@
-*a.out
-hw1/chat
-hw1/client
-hw1/parent
-hw1/child
-hw1/pipe
+*.out
+*chat
+*client
+*parent
+*child
+*pipe
+
