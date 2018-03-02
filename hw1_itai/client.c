@@ -77,7 +77,10 @@ int main(int argc, char** argv) {
 						memset(linebuf,0,MAXLINE);
 						strcpy(linebuf,to_send);
 						write(sockfd, linebuf, strlen(linebuf));
-						blockuntil(sockfd, "OT");
+						if(blockuntil(sockfd, "OT") == -1){ //IF USER DOESN'T EXIST ON STARTUP
+							kill(pid,SIGKILL);
+							chatlist = removeChat(chatlist,t);
+						}
 					}
 					break;
 				default:
@@ -184,6 +187,22 @@ int main(int argc, char** argv) {
 	   		}
 	   		curr_chat = curr_chat->next;
 	   	}
+	}
+}
+
+chat* removeChat(chat* chats, chat* remChat){
+	chat* curr_chat = chats;
+	chat* prev_chat = NULL;
+	while(curr_chat){
+		if(curr_chat == remChat){
+			if(prev_chat){
+				prev_chat->next = curr_chat->next;
+				return chats;
+			}
+			else{
+				return curr_chat->next;
+			}
+		}
 	}
 }
 
@@ -533,11 +552,15 @@ void blockuntilOT(int sockfd) {
 			puts(linebuf);
 			// reply MORF
 		}
+		else if(strcmp(cmd, "EDNE")==0){
+			char *name = strtok(linebuf, " ");
+			printf("User %s does not exist.",name);
+		}
 		else 
-			err_quit("received garbage, expected OT or FROM\n");
+			err_quit("received garbage, expected OT or FROM or EDNE\n");
 	}
 }
-void blockuntil(int sockfd, char *reply) {
+int blockuntil(int sockfd, char *reply) {
 	while(1) {
 		int n = read(sockfd, recvbuf, MAXLINE);
 		recvbuf[n] = 0;
@@ -546,14 +569,19 @@ void blockuntil(int sockfd, char *reply) {
 //			puts(&recvbuf[strlen(cmd)+1]);
 			readuntilend(sockfd, &recvbuf[strlen(cmd)+1]);
 			puts(&recvbuf[strlen(cmd)+1]);
-			return;
+			return 0;
 		}
 		else if(strcmp(cmd, "FROM") == 0) {
 			puts(recvbuf);
 			// TODO: reply MORF
 		}
+		else if(strcmp(cmd, "EDNE")==0){
+			char *name = strtok(linebuf, " ");
+			printf("User %s does not exist.",name);
+			return -1;
+		}
 		else 
-			err_quit("received garbage, expected or FROM\n");
+			err_quit("received garbage, expected TO or FROM\n");
 	}
 }
 

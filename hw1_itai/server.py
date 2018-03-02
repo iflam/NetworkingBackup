@@ -68,6 +68,15 @@ def thread_function(clientsocket,buf):
 		print(cmd)
 		if cmd == b"TO":
 			print("cmd is TO")
+			name = t[1].replace(b"\r\n\r\n",b"")
+			if name in namedict:
+				sendString = f"FROM {name} {t[3]}".encode()
+				clientsocket.send(f"OT {name}\r\n\r\n".encode())
+				namedict[name].send(sendString)
+				print("send OT")
+			else:
+				clientsocket.send(f"EDNE {name}\r\n\r\n".encode())
+				print("sent EDNE")
 		elif cmd == b"LISTU":
 			print("list of users:")
 			sendString = b"UTSIL " 

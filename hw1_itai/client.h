@@ -42,7 +42,7 @@ void readmotd(int sockfd);
 void sendlist(int sockfd);
 void printhelp();
 void blockuntilOT(int sockfd);
-void blockuntil(int sockfd, char *reply);
+int blockuntil(int sockfd, char *reply);
 void handlefrom(int sockfd);
 
 void replyloop(int sockfd, char *cmd);
@@ -57,6 +57,9 @@ struct chat{
     int pid;
     chat* next;
 };
+
+chat* removeChat(chat* chats, chat* remChat);
+
 typedef enum cmd_type{HELP=1, LOG=2, LIST=3,CHAT=4,ERR=5} Cmd_type;
 typedef struct {
 	enum cmd_type cmdt;
