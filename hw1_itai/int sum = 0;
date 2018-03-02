@@ -1,4 +1,0 @@
-int sum = 0;
-for (stuff){
-	int x = Math.random()*10;
-}

@@ -54,7 +54,8 @@ def doLogin(clientsocket, buf):
 	else:
 		print("idk what happens in this case -- NON-IAM")
 
-def thread_function(clientsocket,buf):
+def thread_function(clientsocket,buf): 
+	###REMEMBER: CLIENTSOCKET IS THE SOCKET THIS THREAD READS FROM, IT NEVER CHANGES###
 	doLogin(clientsocket, buf)
 	#Listen on info from my clientsocket
 	while(True):
@@ -63,16 +64,18 @@ def thread_function(clientsocket,buf):
 			buf+= clientsocket.recv(MAXBYTES)
 
 		## Do Stuff based on what received.
-		t = buf.split(b" ",1)
+		t = buf.split(b" ")
 		cmd = t[0].replace(b"\r\n\r\n",b"")
+		print(t)
 		print(cmd)
 		if cmd == b"TO":
 			print("cmd is TO")
-			name = t[1].replace(b"\r\n\r\n",b"")
+			name = t[1].replace(b"\r\n\r\n",b"").decode()
 			if name in namedict:
-				sendString = f"FROM {name} {t[3]}".encode()
+				sendString = f"FROM {name} {t[2]}".encode() #TODO: Something here is going wrong. Might be from client though.
 				clientsocket.send(f"OT {name}\r\n\r\n".encode())
-				namedict[name].send(sendString)
+				sendLoc = namedict[name]
+				sendLoc.send(sendString)
 				print("send OT")
 			else:
 				clientsocket.send(f"EDNE {name}\r\n\r\n".encode())

@@ -1,0 +1,14 @@
+1. BlockUntil isn't working as intended. For example:
+    Because it's waiting for "OT", it will be a problem if we receive UOFF, FROM, etc. 
+    I think we should change this function. Change to the following:
+        Add boolean (or, int with val 0 or 1?) to chat struct "occupied"
+        If we send a message to chat's member, set this occupied to true. 
+        If we then find that chat's readfd is set, we just skip over it every time until we receive an OT. 
+    This will allow for us to be able to receive other messages through the server instead of having to handle them from within the blockuntil function.
+    If you look at /*SERVER PART*/, I have implemented UOFF and FROM to work there. So if we change the blockuntil function to what I said, it will work
+    properly.
+
+2. Implement MROF in server. (if receive MROF, send OT to client.)
+    I currently send OT in the TO part, just because I want to test OT getting received. But it should not be there, it should only be sent when we get a MROF.
+
+3. Lots and lots of error checking. And things we need to implement that I can't remember.s

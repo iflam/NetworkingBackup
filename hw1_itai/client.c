@@ -40,6 +40,8 @@ int main(int argc, char** argv) {
 	    rfds = rfds_init;
 	    if(select(maxfd+1, &rfds, NULL, NULL, NULL) == -1)
 		    err_sys("select error\n");
+
+		/*STDIN PART*/
 	    if(FD_ISSET(fileno(stdin), &rfds)) { 
 			puts("FD_ISSET(stdin)");
 		    if((readcount = read(fileno(stdin), linebuf, MAXLINE)) == 0) // read from stdin
@@ -88,6 +90,7 @@ int main(int argc, char** argv) {
 			}
 	    } //end of STDIN if
 
+	    /*SERVER PART */
 	    if(FD_ISSET(sockfd, &rfds)) { 
 			puts("FD_ISSET(sockfd)");
 			memset(linebuf,0,sizeof(linebuf));
@@ -169,6 +172,7 @@ int main(int argc, char** argv) {
 		    //write(client2chat[WRITE], linebuf, strlen(linebuf)); // write to chat window
 	    }	
 
+	    /*CHAT PART*/
 	    chat* curr_chat = chatlist;
 	    while(curr_chat){
 	    	if(FD_ISSET(curr_chat->readfd, &rfds)) {
@@ -561,6 +565,7 @@ void blockuntilOT(int sockfd) {
 	}
 }
 int blockuntil(int sockfd, char *reply) {
+	//TODO: Fix this. Doesn't work as intended.
 	while(1) {
 		int n = read(sockfd, recvbuf, MAXLINE);
 		recvbuf[n] = 0;
