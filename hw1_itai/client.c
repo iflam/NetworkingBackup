@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 						CreateChatWindow(client2chat, chat2client);
 					}
 					else { // parent
-						chat* t = malloc(sizeof(chat)); // TODO: wha?  sizeof(chatlist)??
+						chat* t = malloc(sizeof(chat));
 						t->name = command->to;
 						t->readfd = chat2client[READ];
 						t->writefd = client2chat[WRITE];
@@ -136,12 +136,27 @@ int main(int argc, char** argv) {
 		    			}
 		    			curr_chat = curr_chat->next;
 		    		}
-		    		if(hasChat == 1){
-		    			sendmrof(sockfd, name);
+		    		if(hasChat == 0){
+		    			pipe(client2chat);
+						pipe(chat2client);
+						pid_t pid = fork();
+						if(pid == 0) { // child
+							CreateChatWindow(client2chat, chat2client);
+						}
+						else{ //parent
+							chat* t = malloc(sizeof(chat));
+							t->name = command->to;
+							t->readfd = chat2client[READ];
+							t->writefd = client2chat[WRITE];
+							t->next = chatlist;
+							t->pid = pid;
+							chatlist = t;
+							FD_SET(chat2client[READ], &rfds_init);
+							maxfd = max(maxfd,chat2client[READ]);
+							write(client2chat[WRITE], msg, strlen(msg));
+						}
 		    		}
-		    		else{
-		    			sendDNE(sockfd, name);
-		    		}
+		    		sendmrof(sockfd,name);
 		    		break;
 		    	default:
 		    		puts("Invalid server command. Quitting");
