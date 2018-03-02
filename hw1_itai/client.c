@@ -87,6 +87,7 @@ int main(int argc, char** argv) {
 
 	    if(FD_ISSET(sockfd, &rfds)) { 
 			puts("FD_ISSET(sockfd)");
+			memset(linebuf,0,sizeof(linebuf));
 		    if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
@@ -104,7 +105,7 @@ int main(int argc, char** argv) {
 		    switch(command->cmdt){
 				/*case OT:
 					puts("read OT");
-					break;
+					break;*/
 		    	case UTSIL:
 		    		puts("Currently active users:");
 		    		printf("%s",command->msg);
@@ -116,7 +117,32 @@ int main(int argc, char** argv) {
 		    			i = strstr(linebuf,ENDLINE);
 		    		}
 		    		printf("\n");
-		    		break;*/
+		    		break;
+		    	case UOFF:;
+			    	char *ptr = strstr(command->msg,ENDLINE);
+			    	*ptr = 0;
+		    		printf("%s has logged off!",command->msg);
+		    		break;
+		    	case FROM:;
+		    		char* name = command->to;
+		    		char* msg = command->msg;
+		    		chat* curr_chat = chatlist;
+		    		int hasChat = 0;
+		    		while(curr_chat){
+		    			if(strcmp(curr_chat->name,name) == 0){
+		    				hasChat = 1;
+		    				write(curr_chat->writefd, msg, strlen(msg));
+		    				break;
+		    			}
+		    			curr_chat = curr_chat->next;
+		    		}
+		    		if(hasChat == 1){
+		    			sendmrof(sockfd, name);
+		    		}
+		    		else{
+		    			sendDNE(sockfd, name);
+		    		}
+		    		break;
 		    	default:
 		    		puts("Invalid server command. Quitting");
 		    		exit(0);
@@ -212,6 +238,25 @@ void readuntilend(int sockfd, char *buf) {
 		buf[n] = 0;
 	}
 }
+
+void sendmrof(int sockfd, char* name){
+	memset(linebuf, 0, strlen(_MROF)+strlen(name)+strlen(ENDLINE)+1);
+	strcpy(linebuf, _MROF);
+	strcat(linebuf, name);
+	strcat(linebuf, ENDLINE);
+	write(sockfd, linebuf, strlen(linebuf));
+	memset(linebuf, 0, strlen(linebuf));
+}
+
+void sendDNE(int sockfd, char* name){
+	memset(linebuf, 0, strlen(_EDNE)+strlen(name)+strlen(ENDLINE)+1);
+	strcpy(linebuf, _EDNE);
+	strcat(linebuf, name);
+	strcat(linebuf, ENDLINE);
+	write(sockfd, linebuf, strlen(linebuf));
+	memset(linebuf, 0, strlen(linebuf));
+
+}
 void sendme2u(int sockfd) {
 	int hello_len = strlen(_ME2U);
 	linebuf[hello_len] = 0;
@@ -286,7 +331,7 @@ server_cmd* parse_server_msg(char* in, Server_cmd_type in_type) { // TODO: can w
 		if(*currChar == '\0') { // if end of line
 			break;
 		}
-		if(curr_cmd->cmdt == UTSIL) {
+		if(curr_cmd->cmdt == UTSIL || curr_cmd->cmdt == UOFF) {
 			char* string = strdup(currChar);
 			curr_cmd->msg = string;
 			return curr_cmd;
@@ -304,6 +349,7 @@ server_cmd* parse_server_msg(char* in, Server_cmd_type in_type) { // TODO: can w
 			case 0: // set cmdt
 				if(strcmp(curr_token,"FROM") == 0) {
 				 	curr_cmd->cmdt = FROM;
+				 	pos = 1;
 				}
 				else if(strcmp(curr_token,"U2EM") == 0) {
 				 	curr_cmd->cmdt = U2EM;
@@ -337,8 +383,13 @@ server_cmd* parse_server_msg(char* in, Server_cmd_type in_type) { // TODO: can w
 				}
 				break;
 			case 1:
+				//FROM 
+				curr_cmd->to = strdup(curr_token);
+				pos=2;
 				break;
-			case 2:
+			case 2: //MSG FOR FROM
+				curr_cmd->msg = strdup(currChar);
+				return curr_cmd;
 				break;
 			default:
 				return NULL;
@@ -452,7 +503,7 @@ void sendlist(int sockfd) {
 	strcpy(sendbuf, _LISTU);
 	sendbuf[strlen(_LISTU)] = 0;
 	write(sockfd, sendbuf, MAXLINE);
-	blockuntil(sockfd, "UTSIL");
+	//blockuntil(sockfd, "UTSIL");
 }
 
 void blockuntilOT(int sockfd) {

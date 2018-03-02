@@ -16,6 +16,8 @@
 #define _LISTU "LISTU" ENDLINE
 #define _BYE "BYE" ENDLINE
 #define _UTSIL "UTSIL"
+#define _MROF "MROF "
+#define _EDNE "EDNE "
 
 #define READ 0
 #define WRITE 1
@@ -30,6 +32,8 @@ void readuntilend(int sockfd, char *buf);
 
 void Login(int sockfd, char *username);
 void Logout(int sockfd, char *username);
+void sendmrof(int sockfd, char* name);
+void sendDNE(int sockfd, char* name);
 void sendme2u(int sockfd);
 void readme2u(int sockfd);
 void sendiam(int sockfd, char *username);
