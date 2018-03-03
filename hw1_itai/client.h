@@ -16,7 +16,7 @@
 #define _LISTU "LISTU" ENDLINE
 #define _BYE "BYE" ENDLINE
 #define _UTSIL "UTSIL"
-#define _MROF "MROF "
+#define _MORF "MORF "
 #define _EDNE "EDNE "
 
 #define READ 0
@@ -25,7 +25,7 @@
 #define FD_SZ_CHAR 4
 
 void ConnectSocket(int sockfd, char **argv);
-void CreateChatWindow(int client2chat[2], int chat2client[2]);
+void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name);
 
 void readuntil(int sockfd, char *buf, char *str);
 void readuntilend(int sockfd, char *buf);

@@ -3,10 +3,10 @@
 
 char linebuf[MAXLINE+1], sendbuf[MAXLINE+1], recvbuf[MAXLINE+1];
 chat* chatlist = NULL;
+char *username;
 
 int main(int argc, char** argv) {
 	int sockfd;
-	char *username;
 	int client2chat[2], chat2client[2]; // pipes
 	pipe(client2chat);
 	pipe(chat2client);
@@ -56,6 +56,7 @@ int main(int argc, char** argv) {
 					Logout(sockfd, username);
 					break;
 				case LIST:
+					printf("calling sendlist\n");
 					sendlist(sockfd);
 					break;
 				case CHAT:
@@ -63,7 +64,7 @@ int main(int argc, char** argv) {
 					pipe(chat2client);
 					pid_t pid = fork();
 					if(pid == 0) { // child
-						CreateChatWindow(client2chat, chat2client);
+						CreateChatWindow(client2chat, chat2client, command->to);
 					}
 					else { // parent
 						chat* t = malloc(sizeof(chat));
@@ -147,7 +148,7 @@ int main(int argc, char** argv) {
 						pipe(chat2client);
 						pid_t pid = fork();
 						if(pid == 0) { // child
-							CreateChatWindow(client2chat, chat2client);
+							CreateChatWindow(client2chat, chat2client, command->to);
 						}
 						else{ //parent
 							chat* t = malloc(sizeof(chat));
@@ -210,16 +211,25 @@ chat* removeChat(chat* chats, chat* remChat){
 	}
 }
 
-void CreateChatWindow(int client2chat[2], int chat2client[2]) {
-	char *args[6];
+void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name) {
+	char *args[10];
 	args[0] = "xterm";
-	args[1] = "-e";
-	args[2] = "./chat";
-	args[3] = calloc(FD_SZ_CHAR+1, sizeof(char));
-	args[4] = calloc(FD_SZ_CHAR+1, sizeof(char));
-	args[5] = NULL;
-	snprintf(args[3], FD_SZ_CHAR, "%d", client2chat[READ]); 
-	snprintf(args[4], FD_SZ_CHAR, "%d", chat2client[WRITE]);
+	args[1] = "-xrm";
+	args[2] = "XTerm.vt100.allowTitleOps: false";
+	args[3] = "-T";
+	char *title = malloc(strlen("FROM ") + strlen(username) + strlen(" TO ") + strlen(to_name));
+	strcpy(title, "FROM ");
+	strcat(title, username);
+	strcat(title, " TO ");
+	strcat(title, to_name);
+	args[4] = title;
+	args[5] = "-e";
+	args[6] = "./chat";
+	args[7] = calloc(FD_SZ_CHAR+1, sizeof(char));
+	args[8] = calloc(FD_SZ_CHAR+1, sizeof(char));
+	args[9] = NULL;
+	snprintf(args[7], FD_SZ_CHAR, "%d", client2chat[READ]); 
+	snprintf(args[8], FD_SZ_CHAR, "%d", chat2client[WRITE]);
 	if(execvp(args[0], args) < 0) 
 		perror("exec error"); 
 }
@@ -278,8 +288,8 @@ void readuntilend(int sockfd, char *buf) {
 }
 
 void sendmrof(int sockfd, char* name){
-	memset(linebuf, 0, strlen(_MROF)+strlen(name)+strlen(ENDLINE)+1);
-	strcpy(linebuf, _MROF);
+	memset(linebuf, 0, strlen(_MORF)+strlen(name)+strlen(ENDLINE)+1);
+	strcpy(linebuf, _MORF);
 	strcat(linebuf, name);
 	strcat(linebuf, ENDLINE);
 	write(sockfd, linebuf, strlen(linebuf));
@@ -538,9 +548,11 @@ void Logout(int sockfd, char *username) {
 
 //send request for users to server
 void sendlist(int sockfd) {
+	printf("in sendlist\n");
 	strcpy(sendbuf, _LISTU);
 	sendbuf[strlen(_LISTU)] = 0;
-	write(sockfd, sendbuf, MAXLINE);
+	printf("sending %s\n", sendbuf);
+	write(sockfd, sendbuf, strlen(sendbuf));
 	//blockuntil(sockfd, "UTSIL");
 }
 
