@@ -6,10 +6,11 @@ int main(int argc, char *argv[]) {
 	int client2chat, chat2client; // pipe ends
 
 	if(argc != ARGC)
-		err_quit("usage: chat <client2chat pipefd> <chat2client pipefd>\n");
+		err_quit("usage: chat <client2chat pipefd> <chat2client pipefd> <msg>\n");
 
 	client2chat = atoi(argv[RPIPE_ARG]);
 	chat2client = atoi(argv[WPIPE_ARG]);
+	char *msg = argv[MSG_ARG];
 
 	fd_set rfds, rfds_init;
 
@@ -20,6 +21,7 @@ int main(int argc, char *argv[]) {
 	int maxfd = client2chat;
 
 	printf(PROMPT);
+	printf("%s", msg);
 	fflush(stdout);
 
 	while(1) {
@@ -36,7 +38,7 @@ int main(int argc, char *argv[]) {
 			int n = read(client2chat, recvline, MAXLINE);
 			recvline[n] = 0;
 			printf(TPMORP);
-			fputs(recvline, stdout);
+			printf("%s", recvline);
 			printf(PROMPT);
 			fflush(stdout);
 		}

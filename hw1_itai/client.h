@@ -25,7 +25,7 @@
 #define FD_SZ_CHAR 4
 
 void ConnectSocket(int sockfd, char **argv);
-void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name);
+void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name, char *msg);
 
 void readuntil(int sockfd, char *buf, char *str);
 void readuntilend(int sockfd, char *buf);
@@ -41,7 +41,6 @@ void readmai(int sockfd);
 void readmotd(int sockfd);
 void sendlist(int sockfd);
 void printhelp();
-void blockuntilOT(int sockfd);
 int blockuntil(int sockfd, char *reply);
 void handlefrom(int sockfd);
 

@@ -60,8 +60,6 @@ def thread_function(clientsocket,buf):
     #Listen on info from my clientsocket
     while(True):
         buf = b""
-        print("buf")
-        print(buf)
         while not buf.endswith(b"\r\n\r\n"):
             buf+= clientsocket.recv(MAXBYTES)
         print("read buf")
@@ -78,16 +76,15 @@ def thread_function(clientsocket,buf):
             name = t[1].replace(b"\r\n\r\n",b"").decode()
             print("name", name)
             if name in namedict:
-                print("t[2] ", t[2].decode()) 
-                t[2] = t[2].decode()
+                t[2:] = [ word.decode() for word in t[2:] ]
+                msg = " ".join(t[2:])
+                print("msg", msg) 
                 myname = sockdict[clientsocket]
-                print("sending FROM", myname, t[2])
-                sendString = f"FROM {myname} {t[2]}".encode() #TODO: Something here is going wrong. Might be from client though.
+                print("sending FROM", myname, msg)
+                sendString = f"FROM {myname} {msg}".encode() #TODO: Something here is going wrong. Might be from client though.
                 print("sendString", sendString)
-                clientsocket.send(f"OT {name}\r\n\r\n".encode())
                 sendLoc = namedict[name]
                 sendLoc.send(sendString)
-                print("send OT")
             else:
                 clientsocket.send(f"EDNE {name}\r\n\r\n".encode())
                 print("sent EDNE")
@@ -101,6 +98,11 @@ def thread_function(clientsocket,buf):
             clientsocket.send(sendString)
         elif cmd == b"MORF":
             print("is MORF")
+            name = t[1].replace(b"\r\n\r\n",b"").decode()
+            myname = sockdict[clientsocket]
+            sendLoc = namedict[name]
+            sendLoc.send(f"OT {myname}\r\n\r\n".encode())
+            print(f"sent OT {myname}\r\n\r\n")
         elif cmd == b"BYE":
             print("Goodbye")
             name = removeUser(clientsocket)

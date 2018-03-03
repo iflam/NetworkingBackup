@@ -64,7 +64,10 @@ int main(int argc, char** argv) {
 					pipe(chat2client);
 					pid_t pid = fork();
 					if(pid == 0) { // child
-						CreateChatWindow(client2chat, chat2client, command->to);
+						strtok(linebuf, " ");
+						strtok(NULL, " ");
+						char *msg = strtok(NULL, " ");
+						CreateChatWindow(client2chat, chat2client, command->to, msg);
 					}
 					else { // parent
 						chat* t = malloc(sizeof(chat));
@@ -98,6 +101,7 @@ int main(int argc, char** argv) {
 		    if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
 			    err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
+			puts(linebuf);
 			//char *cmd = strtok(linebuf, " ");
 			//puts(cmd);
 			//replyloop(cmd);
@@ -148,7 +152,7 @@ int main(int argc, char** argv) {
 						pipe(chat2client);
 						pid_t pid = fork();
 						if(pid == 0) { // child
-							CreateChatWindow(client2chat, chat2client, command->to);
+							CreateChatWindow(client2chat, chat2client, name, ""); 
 						}
 						else{ //parent
 							chat* t = malloc(sizeof(chat));
@@ -211,23 +215,26 @@ chat* removeChat(chat* chats, chat* remChat){
 	}
 }
 
-void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name) {
-	char *args[10];
+void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name, char *msg) {
+	char *args[11];
 	args[0] = "xterm";
 	args[1] = "-xrm";
 	args[2] = "XTerm.vt100.allowTitleOps: false";
 	args[3] = "-T";
-	char *title = malloc(strlen("FROM ") + strlen(username) + strlen(" TO ") + strlen(to_name));
+	char *title = calloc(strlen("FROM ") + strlen(username) + strlen(" TO ") + strlen(to_name) + 1, sizeof(char));
 	strcpy(title, "FROM ");
 	strcat(title, username);
 	strcat(title, " TO ");
 	strcat(title, to_name);
+	printf("Creating chat window %s\n", title);
 	args[4] = title;
 	args[5] = "-e";
 	args[6] = "./chat";
 	args[7] = calloc(FD_SZ_CHAR+1, sizeof(char));
 	args[8] = calloc(FD_SZ_CHAR+1, sizeof(char));
-	args[9] = NULL;
+	args[9] = calloc(strlen(msg)+1, sizeof(char));
+	strcpy(args[9], msg);
+	args[10] = NULL;
 	snprintf(args[7], FD_SZ_CHAR, "%d", client2chat[READ]); 
 	snprintf(args[8], FD_SZ_CHAR, "%d", chat2client[WRITE]);
 	if(execvp(args[0], args) < 0) 
@@ -556,26 +563,6 @@ void sendlist(int sockfd) {
 	//blockuntil(sockfd, "UTSIL");
 }
 
-void blockuntilOT(int sockfd) {
-	while(1) {
-		read(sockfd, linebuf, MAXLINE);
-		char *cmd = strtok(linebuf, " ");
-		if(strcmp(cmd, "OT")==0) {
-			puts(linebuf);
-			return;
-		}
-		else if(strcmp(cmd, "FROM")==0) {
-			puts(linebuf);
-			// reply MORF
-		}
-		else if(strcmp(cmd, "EDNE")==0){
-			char *name = strtok(linebuf, " ");
-			printf("User %s does not exist.",name);
-		}
-		else 
-			err_quit("received garbage, expected OT or FROM or EDNE\n");
-	}
-}
 int blockuntil(int sockfd, char *reply) {
 	//TODO: Fix this. Doesn't work as intended.
 	while(1) {
