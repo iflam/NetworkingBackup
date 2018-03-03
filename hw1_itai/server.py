@@ -7,7 +7,9 @@ MOTD = "Wazzup yoooooo"
 namedict = {} #Dict with name as key
 sockdict = {} #Dict with socket as key
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 loc = sys.argv[1]
+HELP = "help:\n/help\t\tprints help menu\n/users\t\tprint list of users\n/shutdown\tshut down server"
 
 def addUser(name,clientsocket):
     ##MUTEX HERE##
@@ -79,6 +81,7 @@ def thread_function(clientsocket,buf):
             if name in namedict:
                 t[2:] = [ word.decode() for word in t[2:] ]
                 msg = " ".join(t[2:])
+                msg = msg.replace("\r\n\r\n", "")
                 print("msg", msg) 
                 myname = sockdict[clientsocket]
                 print("sending FROM", myname, msg)
@@ -122,7 +125,7 @@ def accept():
         print("buf loop, read", buf)
 
     ## Each individual thread will do this with their client:
-    threading.Thread(target=thread_function,args=(clientsocket,buf)).start()
+    threading.Thread(target=thread_function,args=(clientsocket,buf),daemon=True).start()
 
 def readIn():
     read_stdin = sys.stdin.readline()
@@ -131,6 +134,21 @@ def readIn():
         print("users:")
         for n in namedict:
             print(n)
+    elif read_stdin == "/help\n":
+        print(HELP)
+    elif read_stdin == "/shutdown\n":
+        shutdown()
+
+def shutdown():
+    for sock in sockdict:
+        print("closing", sock)
+        sock.shutdown(socket.SHUT_RDWR)
+        sock.close()
+    print("closing serversocket")
+    serversocket.shutdown(socket.SHUT_RDWR)
+    serversocket.close()
+    print("exiting")
+    exit()
 
 if __name__ == '__main__':
     if loc != "localhost":

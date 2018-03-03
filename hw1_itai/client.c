@@ -4,18 +4,18 @@
 char linebuf[MAXLINE+1], sendbuf[MAXLINE+1], recvbuf[MAXLINE+1];
 chat* chatlist = NULL;
 char *username;
+int sockfd;
 
 int main(int argc, char** argv) {
-	int sockfd;
 	int client2chat[2], chat2client[2]; // pipes
 	pipe(client2chat);
 	pipe(chat2client);
 
 	if(argc != ARGC)
-		err_quit("usage: client <Name> <IPaddress> <port>\n");
+		Err_quit("usage: client <Name> <IPaddress> <port>\n");
 
 	if(strlen(argv[NAME_ARG]) > MAXNAME)
-		err_quit("username too long\n");
+		Err_quit("username too long\n");
 	username = argv[NAME_ARG];
 
 	if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 	    if(FD_ISSET(fileno(stdin), &rfds)) { 
 			puts("FD_ISSET(stdin)");
 		    if((readcount = read(fileno(stdin), linebuf, MAXLINE)) == 0) // read from stdin
-			    err_quit("EOF\n"); 
+			    Err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
 		    cmd* command = parse_cmsg(linebuf);
 			switch(command->cmdt) {
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
 					}
 					break;
 				default:
-					err_quit("Invalid cmdt\n");
+					Err_quit("Invalid cmdt\n");
 			}
 	    } //end of STDIN if
 
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 			puts("FD_ISSET(sockfd)");
 			memset(linebuf,0,sizeof(linebuf));
 		    if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
-			    err_quit("EOF\n"); 
+			    Err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
 			puts(linebuf);
 			//char *cmd = strtok(linebuf, " ");
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 				handlefrom(sockfd);
 			}*/
 			//else
-			//	err_quit("Garbage, wasn't expecting %s\n", cmd);
+			//	Err_quit("Garbage, wasn't expecting %s\n", cmd);
 		    //check for what it returns
 		    server_cmd* command = parse_server_msg(linebuf, (Server_cmd_type)NULL);
 		    //Switch based on command type
@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
 		    		break;
 		    	default:
 		    		puts("Invalid server command. Quitting");
-		    		exit(0);
+		    		Exit(0);
 		    		break;
 		    }
 		    //write(client2chat[WRITE], linebuf, strlen(linebuf)); // write to chat window
@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
 	    	if(FD_ISSET(curr_chat->readfd, &rfds)) {
 				puts("FD_ISSET(curr_chat->readfd)");
 			    if((readcount = read(curr_chat->readfd, linebuf, MAXLINE)) == 0) // read from chat window
-				    err_quit("EOF\n");
+				    Err_quit("EOF\n");
 			    linebuf[readcount] = 0; // null-terminate
 			    cmd* command = (cmd*)malloc(sizeof(cmd)); //utilize to and msg of command for makeTo() function
 			    char *to = curr_chat->name;
@@ -249,10 +249,10 @@ void ConnectSocket(int sockfd, char **argv) {
 	servaddr.sin_port = htons(atoi(argv[PORT_ARG]));
 	if(strcmp(argv[IP_ARG], "localhost") == 0) argv[IP_ARG] = "127.0.0.1";
 	if(inet_pton(AF_INET, argv[IP_ARG], &servaddr.sin_addr) <= 0)
-		err_quit("inet_pton error for %s\n", argv[IP_ARG]);
+		Err_quit("inet_pton error for %s\n", argv[IP_ARG]);
 
 	if(connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) < 0)
-		err_quit("connect error\n");
+		Err_quit("connect error\n");
 }
 
 int max(int a, int b) {
@@ -267,9 +267,9 @@ void Login(int sockfd, char *username) {
 	readuntilend(sockfd, linebuf);
 	puts(linebuf);
 	if(strcmp(linebuf, _ETAKEN) == 0)
-		err_quit("username taken\n");
+		Err_quit("username taken\n");
 	if(strcmp(linebuf, _MAI) != 0)
-		err_quit("read garbage, expected MAI\n");
+		Err_quit("read garbage, expected MAI\n");
 	//readmai(sockfd);
 	readmotd(sockfd);
 }
@@ -281,7 +281,7 @@ void readuntil(int sockfd, char *buf, char *str) {
 		n += read(sockfd, &buf[n], strlen(str)-n);
 		buf[n] = 0;
 		if(n > strlen(str)) {
-			err_quit("Read garbage while reading until %s\n", str);
+			Err_quit("Read garbage while reading until %s\n", str);
 		}
 	}
 }
@@ -536,21 +536,24 @@ cmd* parse_cmsg(char* in){
 		// memset(in_msg, 0, sizeof(char)); // wut
 	}
 	free(in_msg); // code is unreachable (or should be)
-	err_quit("Error: unexpected execution flow in parse_cmsg\n");
+	Err_quit("Error: unexpected execution flow in parse_cmsg\n");
 	return NULL;
 }
 
-void Logout(int sockfd, char *username) {
-	puts("goodbye");
-	strcpy(linebuf, _BYE);
-	write(sockfd, linebuf, strlen(linebuf));
+void killchats() {
 	chat* curr_chat = chatlist;
 	while(curr_chat){
 		kill(curr_chat->pid,SIGKILL);
 		curr_chat = curr_chat->next;
 	}
+}
+void Logout(int sockfd, char *username) {
+	puts("goodbye");
+	strcpy(linebuf, _BYE);
+	write(sockfd, linebuf, strlen(linebuf));
+	killchats();	
 	//send close to server
-	exit(0);
+	Exit(0);
 }
 
 //send request for users to server
@@ -585,7 +588,7 @@ int blockuntil(int sockfd, char *reply) {
 			return -1;
 		}
 		else 
-			err_quit("received garbage, expected TO or FROM\n");
+			Err_quit("received garbage, expected TO or FROM\n");
 	}
 }
 
@@ -616,7 +619,7 @@ void replyloop(int sockfd, char *comd) {
 			puts(recvbuf);
 		}
 		else {
-			err_quit("Garbage, unexpected reply from server %s\n", reply);
+			Err_quit("Garbage, unexpected reply from server %s\n", reply);
 		}
 	}
 }
@@ -636,4 +639,25 @@ char *strrev(char *str)
         j++;
     }
     return str;
+}
+void Err_sys(const char* fmt, ...) {
+	killchats();
+	printf("shutting down sockfd\n");
+	shutdown(sockfd, SHUT_RDWR);
+	close(sockfd);
+	err_sys(fmt);
+}
+void Err_quit(const char* fmt, ...) {
+	killchats();
+	printf("shutting down sockfd\n");
+	shutdown(sockfd, SHUT_RDWR);
+	close(sockfd);
+	err_quit(fmt);
+}
+void Exit(int x) {
+	killchats();
+	printf("shutting down sockfd\n");
+	shutdown(sockfd, SHUT_RDWR);
+	close(sockfd);
+	exit(x);
 }

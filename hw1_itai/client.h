@@ -48,6 +48,11 @@ void replyloop(int sockfd, char *cmd);
 
 char *strrev(char *str);
 
+void killchats();
+void Err_quit(const char *fmt, ...);
+void Err_sys(const char *fmt, ...);
+void Exit(int);
+
 typedef struct chat chat;
 struct chat{
     char* name;

@@ -21,7 +21,10 @@ int main(int argc, char *argv[]) {
 	int maxfd = client2chat;
 
 	printf(PROMPT);
-	printf("%s", msg);
+	if(strlen(msg) != 0) {
+		printf("%s", msg);
+		printf(PROMPT);
+	}
 	fflush(stdout);
 
 	while(1) {
@@ -36,7 +39,7 @@ int main(int argc, char *argv[]) {
 		}
 		if(FD_ISSET(client2chat, &rfds)) {
 			int n = read(client2chat, recvline, MAXLINE);
-			recvline[n] = 0;
+			recvline[n] = 0; // chomp newline
 			printf(TPMORP);
 			printf("%s", recvline);
 			printf(PROMPT);
