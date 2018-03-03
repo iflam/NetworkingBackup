@@ -19,6 +19,9 @@ int main(int argc, char *argv[]) {
 
 	int maxfd = client2chat;
 
+	printf(PROMPT);
+	fflush(stdout);
+
 	while(1) {
 		rfds = rfds_init;
 		if(select(maxfd+1, &rfds, NULL, NULL, NULL) < 0)
@@ -26,11 +29,16 @@ int main(int argc, char *argv[]) {
 		if(FD_ISSET(fileno(stdin), &rfds)) {
 			fgets(sendline, MAXLINE, stdin); // read stdin
 			write(chat2client, sendline, strlen(sendline)); // send to client
+			printf(PROMPT);
+			fflush(stdout);
 		}
 		if(FD_ISSET(client2chat, &rfds)) {
 			int n = read(client2chat, recvline, MAXLINE);
 			recvline[n] = 0;
+			printf(TPMORP);
 			fputs(recvline, stdout);
+			printf(PROMPT);
+			fflush(stdout);
 		}
 	}
 }
