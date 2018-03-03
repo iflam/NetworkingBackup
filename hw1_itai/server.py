@@ -1,6 +1,7 @@
 import socket
 import sys
 import threading
+import selectors
 MAXBYTES = 1
 MOTD = "Wazzup yoooooo"
 namedict = {} #Dict with name as key
@@ -89,8 +90,6 @@ def thread_function(clientsocket,buf):
                 clientsocket.send(f"EDNE {name}\r\n\r\n".encode())
                 print("sent EDNE")
         elif cmd == b"LISTU":
-            print("list of users:")
-            print(namedict)
             sendString = b"UTSIL " 
             for n in namedict:
                 sendString += f"{n} ".encode()
@@ -115,19 +114,37 @@ def thread_function(clientsocket,buf):
             exit(-1)
 
 
+def accept():
+    (clientsocket, address) = serversocket.accept()
+    buf = b""
+    while not buf.endswith(b"\r\n\r\n"):
+        buf += clientsocket.recv(MAXBYTES)
+        print("buf loop, read", buf)
+
+    ## Each individual thread will do this with their client:
+    threading.Thread(target=thread_function,args=(clientsocket,buf)).start()
+
+def readIn():
+    read_stdin = sys.stdin.readline()
+    print("read from selector", read_stdin)
+    if read_stdin == "/users\n":
+        print("users:")
+        for n in namedict:
+            print(n)
 
 if __name__ == '__main__':
     if loc != "localhost":
         int(loc)
     serversocket.bind((loc,int(sys.argv[2])))
     serversocket.listen(5)
+
+    # prepare select to read stdin or socket accept
+    sel = selectors.DefaultSelector()
+    sel.register(sys.stdin, selectors.EVENT_READ, readIn)
+    sel.register(serversocket, selectors.EVENT_READ, accept)
+
     while True:
-        (clientsocket, address) = serversocket.accept()
-        buf = b""
-        while not buf.endswith(b"\r\n\r\n"):
-            buf += clientsocket.recv(MAXBYTES)
-
-        ## Each individual thread will do this with their client:
-        threading.Thread(target=thread_function,args=(clientsocket,buf)).start()
-
-
+        events = sel.select(1)
+        for key, mask in events:
+            callback = key.data
+            callback()
