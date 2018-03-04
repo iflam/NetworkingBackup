@@ -2,11 +2,16 @@
 #include "chat.h"
 
 int main(int argc, char *argv[]) {
+	char *name = argv[4];
+	char *tpmorp = calloc(strlen(KCYN)+strlen(name)+strlen(TPMORP)+1,sizeof(char));
+	strcpy(tpmorp,KCYN);
+	strcat(tpmorp,name);
+	strcat(tpmorp,TPMORP);
 	char sendline[MAXLINE+1], recvline[MAXLINE+1];
 	int client2chat, chat2client; // pipe ends
 
 	if(argc != ARGC)
-		err_quit("usage: chat <client2chat pipefd> <chat2client pipefd> <msg>\n");
+		err_quit("usage: chat <client2chat pipefd> <chat2client pipefd> <msg> <name>\n");
 
 	client2chat = atoi(argv[RPIPE_ARG]);
 	chat2client = atoi(argv[WPIPE_ARG]);
@@ -22,7 +27,7 @@ int main(int argc, char *argv[]) {
 
 	if(strlen(msg) != 0) {
 		printf(PROMPT);
-		printf("%s", msg);
+		printf("%s\n", msg);
 		printf(PROMPT);
 	}
 	fflush(stdout);
@@ -40,7 +45,7 @@ int main(int argc, char *argv[]) {
 		if(FD_ISSET(client2chat, &rfds)) {
 			int n = read(client2chat, recvline, MAXLINE);
 			recvline[n] = 0; // chomp newline
-			printf(TPMORP);
+			printf("\n%s",tpmorp);
 			printf("%s", recvline);
 			printf(PROMPT);
 			fflush(stdout);

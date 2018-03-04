@@ -1,6 +1,6 @@
 #pragma once
 
-#define ARGC 4
+#define ARGC 5
 #define MAXLINE 4096
 #define RPIPE_ARG 1
 #define WPIPE_ARG 2
@@ -18,6 +18,6 @@
 #define KCYN  "\x1B[36m"
 #define KWHT  "\x1B[37m"
 
-#define PROMPT KYEL "> " 
-#define TPMORP KCYN "\n< " 
+#define PROMPT KYEL "Me>> " 
+#define TPMORP KCYN ">>" 
 

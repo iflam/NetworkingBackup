@@ -30,6 +30,9 @@ void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name, cha
 void readuntil(int sockfd, char *buf, char *str);
 void readuntilend(int sockfd, char *buf);
 
+void intHandler(int dummy);
+void sigchld_handler(int signum);
+
 void Login(int sockfd, char *username);
 void Logout(int sockfd, char *username);
 void sendmrof(int sockfd, char* name);
@@ -64,7 +67,7 @@ struct chat{
 
 chat* removeChat(chat* chats, chat* remChat);
 
-typedef enum cmd_type{HELP=1, LOG=2, LIST=3,CHAT=4,ERR=5} Cmd_type;
+typedef enum cmd_type{HELP=1, LOG=2, LIST=3,CHAT=4,PRINT=5, ERR=6} Cmd_type;
 typedef struct {
 	enum cmd_type cmdt;
 	char* to; //NULL when anything but CHAT

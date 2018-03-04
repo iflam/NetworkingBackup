@@ -9,6 +9,9 @@
 #include<sys/socket.h>
 #include<sys/select.h>
 #include<arpa/inet.h>
+#include<errno.h>
+#include <sys/wait.h>
+
 
 #include "errmsg.h"
 

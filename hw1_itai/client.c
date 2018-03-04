@@ -5,6 +5,15 @@ char linebuf[MAXLINE+1], sendbuf[MAXLINE+1], recvbuf[MAXLINE+1];
 chat* chatlist = NULL;
 char *username;
 int sockfd;
+int maxfd = 2;
+
+void print_chats(){
+	chat* curr_chat = chatlist;
+	while(curr_chat){
+		printf("-------CHAT-------\nName: %s\nReadfd: %i\nWritefd: %i\nPid: %i\n",curr_chat->name,curr_chat->readfd,curr_chat->writefd,curr_chat->pid);
+	curr_chat = curr_chat->next;
+	}
+}
 
 int main(int argc, char** argv) {
 	int client2chat[2], chat2client[2]; // pipes
@@ -24,7 +33,8 @@ int main(int argc, char** argv) {
 	ConnectSocket(sockfd, argv);
 
 	Login(sockfd, username);
-
+	signal(SIGINT,intHandler);
+	signal(SIGCHLD,sigchld_handler);
     fd_set rfds, rfds_init;
 
     FD_ZERO(&rfds_init);
@@ -32,16 +42,20 @@ int main(int argc, char** argv) {
     FD_SET(sockfd, &rfds_init); // prepare to read from server
     FD_SET(chat2client[READ], &rfds_init); // prepare to read from chat window
 
-    int maxfd = max(sockfd, chat2client[READ]);
+    maxfd = max(sockfd, chat2client[READ]);
 
     int readcount;
     while(1) {
 	    rfds = rfds_init;
-	    if(select(maxfd+1, &rfds, NULL, NULL, NULL) == -1)
+	    if(select(maxfd+1, &rfds, NULL, NULL, NULL) == -1){
+	    	if(errno == EINTR)
+	    		continue;
 		    err_sys("select error\n");
+	    }
 
 		/*STDIN PART*/
 	    if(FD_ISSET(fileno(stdin), &rfds)) { 
+	    	puts("Read from stdin");
 		    if((readcount = read(fileno(stdin), linebuf, MAXLINE)) == 0) // read from stdin
 			    Err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
@@ -56,6 +70,9 @@ int main(int argc, char** argv) {
 				case LIST:
 					sendlist(sockfd);
 					break;
+				case PRINT:
+					print_chats();
+					break;
 				case CHAT:
 					pipe(client2chat);
 					pipe(chat2client);
@@ -63,7 +80,7 @@ int main(int argc, char** argv) {
 					if(pid == 0) { // child
 						strtok(linebuf, " ");
 						strtok(NULL, " ");
-						char *msg = strtok(NULL, " ");
+						char *msg = strtok(NULL, "\r\n\r\n");
 						CreateChatWindow(client2chat, chat2client, command->to, msg);
 					}
 					else { // parent
@@ -80,7 +97,8 @@ int main(int argc, char** argv) {
 						memset(linebuf,0,MAXLINE);
 						strcpy(linebuf,to_send);
 						write(sockfd, linebuf, strlen(linebuf));
-						if(blockuntil(sockfd, "OT") == -1){ //IF USER DOESN'T EXIST ON STARTUP
+						int err;
+						if((err = blockuntil(sockfd, "OT")) == -1){ //IF USER DOESN'T EXIST ON STARTUP
 							kill(pid,SIGKILL);
 							chatlist = removeChat(chatlist,t);
 						}
@@ -93,9 +111,11 @@ int main(int argc, char** argv) {
 
 	    /*SERVER PART */
 	    if(FD_ISSET(sockfd, &rfds)) { 
+	    	puts("Read from server");
 			memset(linebuf,0,sizeof(linebuf));
 		    if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
 			    Err_quit("EOF\n"); 
+			puts("Finished reading from server");
 		    linebuf[readcount] = 0; // null-terminate
 			//puts(linebuf);
 			//char *cmd = strtok(linebuf, " ");
@@ -129,34 +149,63 @@ int main(int argc, char** argv) {
 			    	char *ptr = strstr(command->msg,ENDLINE);
 			    	*ptr = 0;
 			    	memset(linebuf,0,sizeof(linebuf));
-			    	printf("%s",command->msg);
-			    	strcpy(linebuf,command->msg);
-			    	strcpy(linebuf+strlen(command->msg)," has logged off!");
-		    		//printf("%s has logged off!",command->msg);
+			    	strcat(linebuf,command->msg);
+			    	strcat(linebuf," has logged off!");
 		    		chat* curr_chat = chatlist;
+		    		int hasChat = 0;
 		    		while(curr_chat){
 		    			if(strcmp(curr_chat->name,command->msg)==0){
+		    				hasChat = 1;
 		    				write(curr_chat->writefd,linebuf,strlen(command->msg)+strlen(" has logged off! "));
 		    				removeChat(chatlist, curr_chat);
 		    				break;
 		    			}
 		    			curr_chat = curr_chat->next;
 		    		}
+		    		if(hasChat == 0){
+		    			printf("%s has logged off!\n",command->msg);
+		    		}
 		    		break;
 		    	case FROM:;
+		    		puts("Got to FROM");
 		    		char* name = command->to;
 		    		char* msg = command->msg;
 		    		curr_chat = chatlist;
-		    		int hasChat = 0;
+		    		hasChat = 0;
+		    		printf("from about to start loop");
 		    		while(curr_chat){
+		    			printf("%s\n",curr_chat->name);
 		    			if(strcmp(curr_chat->name,name) == 0){
+		    				puts("is name");
+		    				if(curr_chat->pid == -1){
+		    					puts("is pid");
+		    					hasChat = 2;
+		    					break;
+		    				}
 		    				hasChat = 1;
 		    				write(curr_chat->writefd, msg, strlen(msg));
 		    				break;
 		    			}
 		    			curr_chat = curr_chat->next;
 		    		}
-		    		if(hasChat == 0){
+		    		if(hasChat == 2){
+		    			puts("Creating new chat for existing user");
+		    			pipe(client2chat);
+		    			pipe(chat2client);
+		    			pid_t pid = fork();
+		    			if(pid == 0){
+		    				CreateChatWindow(client2chat,chat2client,name, "");
+		    			}
+		    			else{
+		    				curr_chat->pid = pid;
+		    				curr_chat->readfd = chat2client[READ];
+		    				curr_chat->writefd = client2chat[WRITE];
+		    				FD_SET(chat2client[READ],&rfds_init);
+		    				maxfd = max(maxfd,chat2client[READ]);
+		    				write(client2chat[WRITE],msg,strlen(msg));
+		    			}
+		    		}
+		    		else if(hasChat == 0){
 		    			pipe(client2chat);
 						pipe(chat2client);
 						pid_t pid = fork();
@@ -177,6 +226,7 @@ int main(int argc, char** argv) {
 						}
 		    		}
 		    		sendmrof(sockfd,name);
+		    		puts("Finished FROM");
 		    		break;
 		    	default:
 		    		puts("Invalid server command. Quitting");
@@ -190,6 +240,7 @@ int main(int argc, char** argv) {
 	    chat* curr_chat = chatlist;
 	    while(curr_chat){
 	    	if(FD_ISSET(curr_chat->readfd, &rfds)) {
+	    		puts("Read from chat");
 			    if((readcount = read(curr_chat->readfd, linebuf, MAXLINE)) == 0) // read from chat window
 				    Err_quit("EOF\n");
 			    linebuf[readcount] = 0; // null-terminate
@@ -208,6 +259,33 @@ int main(int argc, char** argv) {
 	}
 }
 
+void intHandler(int dummy) {
+	Logout(sockfd,username);
+}
+
+void sigchld_handler(int signum){
+	pid_t pid;
+	int status;
+	puts("got sigchild");
+	while((pid = waitpid(-1,&status,WNOHANG))!= -1){
+		chat* curr_chat = chatlist;
+		while(curr_chat){
+			if(curr_chat->pid == pid){
+				curr_chat->pid = -1;
+				curr_chat->readfd = -1;
+				curr_chat->writefd = -1;
+			}
+			curr_chat = curr_chat->next;
+		}
+		curr_chat = chatlist;
+		maxfd = 2;
+		while(curr_chat){
+			maxfd = max(maxfd,curr_chat->readfd);
+			curr_chat = curr_chat->next;
+		}
+	}
+	printf("new maxfd: %i",maxfd);
+}
 chat* removeChat(chat* chats, chat* remChat){
 	chat* curr_chat = chats;
 	chat* prev_chat = NULL;
@@ -243,8 +321,10 @@ void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name, cha
 	args[7] = calloc(FD_SZ_CHAR+1, sizeof(char));
 	args[8] = calloc(FD_SZ_CHAR+1, sizeof(char));
 	args[9] = calloc(strlen(msg)+1, sizeof(char));
+	args[10] = calloc(strlen(to_name)+1,sizeof(char));
 	strcpy(args[9], msg);
-	args[10] = NULL;
+	strcpy(args[10],to_name);
+	args[11] = NULL;
 	snprintf(args[7], FD_SZ_CHAR, "%d", client2chat[READ]); 
 	snprintf(args[8], FD_SZ_CHAR, "%d", chat2client[WRITE]);
 	if(execvp(args[0], args) < 0) 
@@ -347,7 +427,7 @@ void readmai(int sockfd) {
 void readmotd(int sockfd) {
 	readuntil(sockfd, linebuf, _MOTD);
 	readuntilend(sockfd, linebuf);
-	//fputs(&linebuf[strlen(_MOTD)], stdout);
+	fputs(&linebuf[strlen(_MOTD)], stdout);
 }
 
 void printhelp() {
@@ -521,6 +601,9 @@ cmd* parse_cmsg(char* in){
 				 else if(strcmp(in_msg, "/chat") == 0){
 				 	curr_cmd->cmdt = CHAT;
 				 }
+				 else if(strcmp(in_msg, "/print") == 0){
+				 	curr_cmd->cmdt = PRINT;
+				 }
 				 else
 				 	curr_cmd->cmdt = ERR;
 				 if(curr_cmd->cmdt != CHAT){ // only chat requires to and msg
@@ -551,9 +634,12 @@ cmd* parse_cmsg(char* in){
 void killchats() {
 	chat* curr_chat = chatlist;
 	while(curr_chat){
-		kill(curr_chat->pid,SIGKILL);
-		close(curr_chat->readfd);
-		close(curr_chat->writefd);
+		if(curr_chat->pid == -1){/*SKIP*/}
+		else{
+			kill(curr_chat->pid,SIGKILL);
+			close(curr_chat->readfd);
+			close(curr_chat->writefd);
+		}
 		curr_chat = curr_chat->next;
 	}
 }
@@ -562,7 +648,8 @@ void Logout(int sockfd, char *username) {
 	strcpy(linebuf, _BYE);
 	write(sockfd, linebuf, strlen(linebuf));
 	killchats();	
-	shutdown(sockfd, SHUT_RDWR);
+	shutdown(sockfd, SHUT_WR);
+	blockuntil(sockfd,"EYB");
 	close(sockfd);
 	//send close to server
 	Exit(0);
@@ -583,19 +670,22 @@ int blockuntil(int sockfd, char *reply) {
 		recvbuf[n] = 0;
 		char *cmd = strtok(recvbuf, " ");
 		if(strcmp(cmd, reply) == 0) { // if got expected reply
-//			puts(&recvbuf[strlen(cmd)+1]);
+			//			puts(&recvbuf[strlen(cmd)+1]);
 			readuntilend(sockfd, &recvbuf[strlen(cmd)+1]);
 			puts(&recvbuf[strlen(cmd)+1]);
 			return 0;
-		}
-		else if(strcmp(cmd, "FROM") == 0) {
-			puts(recvbuf);
-			// TODO: reply MORF
 		}
 		else if(strcmp(cmd, "EDNE")==0){
 			char *name = strtok(linebuf, " ");
 			printf("User %s does not exist.",name);
 			return -1;
+		}
+		else if(strcmp(cmd,"BYE\r\n\r\n")){
+			return 0;
+		}
+		else if(strcmp(cmd, "FROM") == 0) {
+			puts(recvbuf);
+			// TODO: reply MORF
 		}
 		else 
 			Err_quit("received garbage, expected TO or FROM\n");

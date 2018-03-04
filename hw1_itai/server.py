@@ -83,9 +83,12 @@ def thread_function(clientsocket,buf):
             if verbose: print("cmd is TO")
             name = t[1].replace(b"\r\n\r\n",b"").decode()
             print("name", name)
+            print(sockdict[clientsocket])
             if(name == sockdict[clientsocket]):
                 if verbose: print("TO to self")
-                clientsocket.send(b"EDNE Itai\r\n\r\n")
+                clientsocket.send(f"EDNE {name}\r\n\r\n".encode())
+                if verbose: print(f"Sent EDNE to {name}")
+                continue;
             elif name in namedict:
                 t[2:] = [ word.decode() for word in t[2:] ]
                 msg = " ".join(t[2:])
