@@ -20,8 +20,8 @@ int main(int argc, char *argv[]) {
 
 	int maxfd = client2chat;
 
-	printf(PROMPT);
 	if(strlen(msg) != 0) {
+		printf(PROMPT);
 		printf("%s", msg);
 		printf(PROMPT);
 	}

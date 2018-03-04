@@ -10,30 +10,34 @@ serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 loc = sys.argv[1]
 HELP = "help:\n/help\t\tprints help menu\n/users\t\tprint list of users\n/shutdown\tshut down server"
+lock = threading.Lock()
+finish = False
 
 def addUser(name,clientsocket):
     ##MUTEX HERE##
-    if(name in namedict):
-        print("Taken.")
-        ##CLOSE MUTEX##
-        return -1
-    else:
-        namedict[name] = clientsocket
-        sockdict[clientsocket] = name
-        ##CLOSE MUTEX##
-        return 0
+    with lock:
+        if(name in namedict):
+            print("Taken.")
+            ##CLOSE MUTEX##
+            return -1
+        else:
+            namedict[name] = clientsocket
+            sockdict[clientsocket] = name
+            ##CLOSE MUTEX##
+            return 0
 
 def removeUser(clientsocket):
-    ##MUTEX HERE##
-    if clientsocket in sockdict:
-        name = sockdict[clientsocket]
-        del sockdict[clientsocket]
-        del namedict[name]
-        ##CLOSE MUTEX##
-        return name
-    else:
-        ##CLOSE MUTEX##
-        return None
+    with lock:
+        ##MUTEX HERE##
+        if clientsocket in sockdict:
+            name = sockdict[clientsocket]
+            del sockdict[clientsocket]
+            del namedict[name]
+            ##CLOSE MUTEX##
+            return name
+        else:
+            ##CLOSE MUTEX##
+            return None
 
 def doLogin(clientsocket, buf):
     if(buf == b"ME2U\r\n\r\n"):
@@ -61,7 +65,7 @@ def thread_function(clientsocket,buf):
     ###REMEMBER: CLIENTSOCKET IS THE SOCKET THIS THREAD READS FROM, IT NEVER CHANGES###
     doLogin(clientsocket, buf)
     #Listen on info from my clientsocket
-    while(True):
+    while(not finish):
         buf = b""
         while not buf.endswith(b"\r\n\r\n"):
             buf+= clientsocket.recv(MAXBYTES)
@@ -115,7 +119,7 @@ def thread_function(clientsocket,buf):
         else:
             print("Garbage command. Exiting")
             exit(-1)
-
+    return finish 
 
 def accept():
     (clientsocket, address) = serversocket.accept()
@@ -140,6 +144,10 @@ def readIn():
         shutdown()
 
 def shutdown():
+    finish = True
+    for th in threading.enumerate():
+        if th != threading.current_thread():
+            th.join(timeout=1) # wait for child threads to finish
     for sock in sockdict:
         print("closing", sock)
         sock.shutdown(socket.SHUT_RDWR)
