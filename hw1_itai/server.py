@@ -8,7 +8,7 @@ namedict = {} #Dict with name as key
 sockdict = {} #Dict with socket as key
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-loc = 0.0.0.0
+loc = "0.0.0.0"
 verbose = False
 HELP = "help:\n/help\t\tprints help menu\n/users\t\tprint list of users\n/shutdown\tshut down server"
 lock = threading.Lock()
@@ -51,12 +51,12 @@ def doLogin(clientsocket, buf):
         buf += clientsocket.recv(MAXBYTES)
     if(buf.startswith(b"IAM")):
         cmd = buf.split(b" ")
-        print("The name is:",cmd[1].replace(b"\r\n\r\n",b"").decode())
+        if verbose: print("The name is:",cmd[1].replace(b"\r\n\r\n",b"").decode())
         e = addUser(cmd[1].replace(b"\r\n\r\n",b"").decode(),clientsocket)
         if(e == -1):
             clientsocket.send(b"ETAKEN\r\n\r\n")
         else:
-            print("New user!")
+            if verbose: print("New user!")
             clientsocket.send(b"MAI\r\n\r\n")
             clientsocket.send(f"MOTD {MOTD}\r\n\r\n".encode())
     else:
@@ -80,26 +80,26 @@ def thread_function(clientsocket,buf):
         print(t)
         print(cmd)
         if cmd == b"TO":
-            print("cmd is TO")
+            if verbose: print("cmd is TO")
             name = t[1].replace(b"\r\n\r\n",b"").decode()
             print("name", name)
             if(name == sockdict[clientsocket]):
-                print("TO to self")
+                if verbose: print("TO to self")
                 clientsocket.send(b"EDNE Itai\r\n\r\n")
             elif name in namedict:
                 t[2:] = [ word.decode() for word in t[2:] ]
                 msg = " ".join(t[2:])
                 msg = msg.replace("\r\n\r\n", "")
-                print("msg", msg) 
+                if verbose: print("msg", msg) 
                 myname = sockdict[clientsocket]
-                print("sending FROM", myname, msg)
+                if verbose: print("sending FROM", myname, msg)
                 sendString = f"FROM {myname} {msg}".encode() #TODO: Something here is going wrong. Might be from client though.
-                print("sendString", sendString)
+                if verbose: print("sendString", sendString)
                 sendLoc = namedict[name]
                 sendLoc.send(sendString)
             else:
                 clientsocket.send(f"EDNE {name}\r\n\r\n".encode())
-                print("sent EDNE")
+                if verbose: print("sent EDNE")
         elif cmd == b"LISTU":
             sendString = b"UTSIL " 
             for n in namedict:
@@ -107,14 +107,14 @@ def thread_function(clientsocket,buf):
             sendString+=b"\r\n\r\n"
             clientsocket.send(sendString)
         elif cmd == b"MORF":
-            print("is MORF")
+            if verbose: print("is MORF")
             name = t[1].replace(b"\r\n\r\n",b"").decode()
             myname = sockdict[clientsocket]
             sendLoc = namedict[name]
             sendLoc.send(f"OT {myname}\r\n\r\n".encode())
-            print(f"sent OT {myname}\r\n\r\n")
+            if verbose: print(f"sent OT {myname}\r\n\r\n")
         elif cmd == b"BYE":
-            print("Goodbye")
+            if verbose: print("Goodbye")
             name = removeUser(clientsocket)
             clientsocket.send(b"EYB\r\n\r\n")
             for x in sockdict:
@@ -130,14 +130,14 @@ def accept():
     buf = b""
     while not buf.endswith(b"\r\n\r\n"):
         buf += clientsocket.recv(MAXBYTES)
-        print("buf loop, read", buf)
+        if verbose: print("buf loop, read", buf)
 
     ## Each individual thread will do this with their client:
     threading.Thread(target=thread_function,args=(clientsocket,buf),daemon=True).start()
 
 def readIn():
     read_stdin = sys.stdin.readline()
-    print("read from selector", read_stdin)
+    if verbose: print("read from selector", read_stdin)
     if read_stdin == "/users\n":
         print("users:")
         for n in namedict:
@@ -169,13 +169,23 @@ if __name__ == '__main__':
         exit(0)
     elif(sys.argv[1] == "-v"):
         verbose = True
-        numWorkers = sys.argv[3]
+        try:
+        	numWorkers = int(sys.argv[3])
+        except:
+        	print("numWorkers must be an integer.")
+        	exit(-1)
         serversocket.bind((loc,int(sys.argv[2])))
         serversocket.listen(numWorkers)
+        MOTD = sys.argv[4]
     else:
-        numWorkers = sys.argv[2]
+        try:
+        	numWorkers = int(sys.argv[2])
+        except:
+        	print("numWorkers must be an integer.")
+        	exit(-1)
         serversocket.bind((loc,int(sys.argv[1])))
         serversocket.listen(numWorkers)
+        MOTD = sys.argv[3]
 
     # prepare select to read stdin or socket accept
     sel = selectors.DefaultSelector()
