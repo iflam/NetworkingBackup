@@ -119,7 +119,8 @@ def thread_function(clientsocket,buf):
             clientsocket.send(b"EYB\r\n\r\n")
             for x in sockdict:
                 x.send(f"UOFF {name}\r\n\r\n".encode())
-                exit(0)
+                #exit(0)
+                return finish
         else:
             print("Garbage command. Exiting")
             exit(-1)
