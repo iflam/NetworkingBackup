@@ -191,7 +191,8 @@ int main(int argc, char** argv) {
 			    char* to_send = makeTo(to, msg);
 			    strcpy(linebuf,to_send);
 			    write(sockfd, linebuf, strlen(linebuf)); // write to server 
-				blockuntil(sockfd, "OT");
+				blockuntil(sockfd, "OT"); // problem
+				//curr_chat->waiting = true;
 			    free(command);
 	   		}
 	   		curr_chat = curr_chat->next;
@@ -544,6 +545,8 @@ void killchats() {
 	chat* curr_chat = chatlist;
 	while(curr_chat){
 		kill(curr_chat->pid,SIGKILL);
+		close(curr_chat->readfd);
+		close(curr_chat->writefd);
 		curr_chat = curr_chat->next;
 	}
 }
@@ -552,6 +555,8 @@ void Logout(int sockfd, char *username) {
 	strcpy(linebuf, _BYE);
 	write(sockfd, linebuf, strlen(linebuf));
 	killchats();	
+	shutdown(sockfd, SHUT_RDWR);
+	close(sockfd);
 	//send close to server
 	Exit(0);
 }
