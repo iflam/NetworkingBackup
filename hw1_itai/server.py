@@ -8,7 +8,8 @@ namedict = {} #Dict with name as key
 sockdict = {} #Dict with socket as key
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-loc = sys.argv[1]
+loc = 0.0.0.0
+verbose = False
 HELP = "help:\n/help\t\tprints help menu\n/users\t\tprint list of users\n/shutdown\tshut down server"
 
 def addUser(name,clientsocket):
@@ -78,7 +79,10 @@ def thread_function(clientsocket,buf):
             print("cmd is TO")
             name = t[1].replace(b"\r\n\r\n",b"").decode()
             print("name", name)
-            if name in namedict:
+            if(name == sockdict[clientsocket]):
+                print("TO to self")
+                clientsocket.send(b"EDNE Itai\r\n\r\n")
+            elif name in namedict:
                 t[2:] = [ word.decode() for word in t[2:] ]
                 msg = " ".join(t[2:])
                 msg = msg.replace("\r\n\r\n", "")
@@ -151,10 +155,19 @@ def shutdown():
     exit()
 
 if __name__ == '__main__':
-    if loc != "localhost":
-        int(loc)
-    serversocket.bind((loc,int(sys.argv[2])))
-    serversocket.listen(5)
+    print(sys.argv)
+    if(sys.argv[1] == "-h"):
+        print(HELP)
+        exit(0)
+    elif(sys.argv[1] == "-v"):
+        verbose = True
+        numWorkers = sys.argv[3]
+        serversocket.bind((loc,int(sys.argv[2])))
+        serversocket.listen(numWorkers)
+    else:
+        numWorkers = sys.argv[2]
+        serversocket.bind((loc,int(sys.argv[1])))
+        serversocket.listen(numWorkers)
 
     # prepare select to read stdin or socket accept
     sel = selectors.DefaultSelector()
