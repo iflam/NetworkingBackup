@@ -60,7 +60,6 @@ struct chat{
     int writefd;
     int pid;
     chat* next;
-	bool waiting;
 };
 
 chat* removeChat(chat* chats, chat* remChat);

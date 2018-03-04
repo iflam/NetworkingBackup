@@ -36,14 +36,12 @@ int main(int argc, char** argv) {
 
     int readcount;
     while(1) {
-    	puts("reached top");
 	    rfds = rfds_init;
 	    if(select(maxfd+1, &rfds, NULL, NULL, NULL) == -1)
 		    err_sys("select error\n");
 
 		/*STDIN PART*/
 	    if(FD_ISSET(fileno(stdin), &rfds)) { 
-			puts("FD_ISSET(stdin)");
 		    if((readcount = read(fileno(stdin), linebuf, MAXLINE)) == 0) // read from stdin
 			    Err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
@@ -56,7 +54,6 @@ int main(int argc, char** argv) {
 					Logout(sockfd, username);
 					break;
 				case LIST:
-					printf("calling sendlist\n");
 					sendlist(sockfd);
 					break;
 				case CHAT:
@@ -96,12 +93,11 @@ int main(int argc, char** argv) {
 
 	    /*SERVER PART */
 	    if(FD_ISSET(sockfd, &rfds)) { 
-			puts("FD_ISSET(sockfd)");
 			memset(linebuf,0,sizeof(linebuf));
 		    if((readcount = read(sockfd, linebuf, MAXLINE)) == 0) // read from server
 			    Err_quit("EOF\n"); 
 		    linebuf[readcount] = 0; // null-terminate
-			puts(linebuf);
+			//puts(linebuf);
 			//char *cmd = strtok(linebuf, " ");
 			//puts(cmd);
 			//replyloop(cmd);
@@ -132,12 +128,25 @@ int main(int argc, char** argv) {
 		    	case UOFF:;
 			    	char *ptr = strstr(command->msg,ENDLINE);
 			    	*ptr = 0;
-		    		printf("%s has logged off!",command->msg);
+			    	memset(linebuf,0,sizeof(linebuf));
+			    	printf("%s",command->msg);
+			    	strcpy(linebuf,command->msg);
+			    	strcpy(linebuf+strlen(command->msg)," has logged off!");
+		    		//printf("%s has logged off!",command->msg);
+		    		chat* curr_chat = chatlist;
+		    		while(curr_chat){
+		    			if(strcmp(curr_chat->name,command->msg)==0){
+		    				write(curr_chat->writefd,linebuf,strlen(command->msg)+strlen(" has logged off! "));
+		    				removeChat(chatlist, curr_chat);
+		    				break;
+		    			}
+		    			curr_chat = curr_chat->next;
+		    		}
 		    		break;
 		    	case FROM:;
 		    		char* name = command->to;
 		    		char* msg = command->msg;
-		    		chat* curr_chat = chatlist;
+		    		curr_chat = chatlist;
 		    		int hasChat = 0;
 		    		while(curr_chat){
 		    			if(strcmp(curr_chat->name,name) == 0){
@@ -181,7 +190,6 @@ int main(int argc, char** argv) {
 	    chat* curr_chat = chatlist;
 	    while(curr_chat){
 	    	if(FD_ISSET(curr_chat->readfd, &rfds)) {
-				puts("FD_ISSET(curr_chat->readfd)");
 			    if((readcount = read(curr_chat->readfd, linebuf, MAXLINE)) == 0) // read from chat window
 				    Err_quit("EOF\n");
 			    linebuf[readcount] = 0; // null-terminate
@@ -207,9 +215,11 @@ chat* removeChat(chat* chats, chat* remChat){
 		if(curr_chat == remChat){
 			if(prev_chat){
 				prev_chat->next = curr_chat->next;
+				free(remChat);
 				return chats;
 			}
 			else{
+				free(remChat);
 				return curr_chat->next;
 			}
 		}
@@ -227,7 +237,6 @@ void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name, cha
 	strcat(title, username);
 	strcat(title, " TO ");
 	strcat(title, to_name);
-	printf("Creating chat window %s\n", title);
 	args[4] = title;
 	args[5] = "-e";
 	args[6] = "./chat";
@@ -266,7 +275,6 @@ void Login(int sockfd, char *username) {
 	readme2u(sockfd);
 	sendiam(sockfd, username);
 	readuntilend(sockfd, linebuf);
-	puts(linebuf);
 	if(strcmp(linebuf, _ETAKEN) == 0)
 		Err_quit("username taken\n");
 	if(strcmp(linebuf, _MAI) != 0)
@@ -323,7 +331,7 @@ void readme2u(int sockfd) {
 	int hello_len = strlen(_U2EM);
 	readuntil(sockfd, linebuf, _U2EM);
 	linebuf[hello_len] = 0;
-	fputs(linebuf, stdout);
+	// fputs(linebuf, stdout);
 }
 void sendiam(int sockfd, char *username) {
 	memset(linebuf, 0, strlen(_IAM)+strlen(username)+strlen(ENDLINE)+1);
@@ -335,12 +343,11 @@ void sendiam(int sockfd, char *username) {
 }
 void readmai(int sockfd) {
 	readuntil(sockfd, linebuf, _MAI);
-	printf("read mai\n");
 }
 void readmotd(int sockfd) {
 	readuntil(sockfd, linebuf, _MOTD);
 	readuntilend(sockfd, linebuf);
-	fputs(&linebuf[strlen(_MOTD)], stdout);
+	//fputs(&linebuf[strlen(_MOTD)], stdout);
 }
 
 void printhelp() {
@@ -551,7 +558,7 @@ void killchats() {
 	}
 }
 void Logout(int sockfd, char *username) {
-	puts("goodbye");
+	puts("Goodbye :(");
 	strcpy(linebuf, _BYE);
 	write(sockfd, linebuf, strlen(linebuf));
 	killchats();	
@@ -563,10 +570,8 @@ void Logout(int sockfd, char *username) {
 
 //send request for users to server
 void sendlist(int sockfd) {
-	printf("in sendlist\n");
 	strcpy(sendbuf, _LISTU);
 	sendbuf[strlen(_LISTU)] = 0;
-	printf("sending %s\n", sendbuf);
 	write(sockfd, sendbuf, strlen(sendbuf));
 	//blockuntil(sockfd, "UTSIL");
 }
@@ -604,7 +609,7 @@ void handlefrom(int sockfd) {
 	strcat(sendbuf, user);
 	strcat(sendbuf, ENDLINE);
 	write(sockfd, sendbuf, strlen(sendbuf));
-	puts(msg); // print msg
+	//puts(msg); // print msg
 }
 
 void replyloop(int sockfd, char *comd) {
@@ -616,12 +621,12 @@ void replyloop(int sockfd, char *comd) {
 		char *reply = strtok(recvbuf, " ");
 		if(strcmp(reply, strrev(comd)) == 0) { // if received expected reply
 			recvbuf[strlen(reply)] = ' ';
-			puts(recvbuf);
+			//puts(recvbuf);
 			return;
 		}
 		else if(strcmp(reply, "FROM") == 0) { // if received message while waiting for reply
 			recvbuf[strlen(reply)] = ' ';
-			puts(recvbuf);
+			//puts(recvbuf);
 		}
 		else {
 			Err_quit("Garbage, unexpected reply from server %s\n", reply);
