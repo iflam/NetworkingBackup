@@ -441,10 +441,10 @@ void printhelp() {
 	printf("/help\n/chat <to> <msg>\n/listu\tlist users\n/logout\n");
 }
 
-typedef struct chat chat;
+typedef struct chat chat; //lol why is this here
 
 char* makeTo(char *to, char *msg){
-	char* string = malloc((strlen(to)+strlen(msg))*sizeof(char) + 16);
+	char* string = malloc(strlen(to)+strlen(msg)+strlen("TO ")+strlen(" ")+strlen(ENDLINE)+1);
 	memset(string,0,sizeof(string));
 	strcat(string,"TO ");
 	strcat(string,to);
@@ -665,6 +665,7 @@ void killchats() {
 	FreeChats(chatlist);
 }
 void FreeChats(chat* curr) {
+	if(curr == NULL) return;
 	if(curr->next == NULL) free(curr);
 	else {
 		FreeChats(curr->next);
