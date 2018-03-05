@@ -80,10 +80,14 @@ int main(int argc, char** argv) {
 					pipe(chat2client);
 					pid_t pid = fork();
 					if(pid == 0) { // child
-						strtok(linebuf, " ");
-						strtok(NULL, " ");
-						char *msg = strtok(NULL, "\r\n\r\n");
-						CreateChatWindow(client2chat, chat2client, command->to, msg);
+						//char *msg;
+						/*strtok(linebuf, " "); // consume /chat cmd
+						if(strtok(NULL, " ") == NULL) {
+							puts("no more spaces");
+							msg = ""; // consume username; but there may not be a space after username
+						}
+						else msg = strtok(NULL, "\r\n\r\n");*/
+						CreateChatWindow(client2chat, chat2client, command->to, command->msg);
 					}
 					else { // parent
 						chat* t = malloc(sizeof(chat));
@@ -102,7 +106,7 @@ int main(int argc, char** argv) {
 						int err;
 						if((err = blockuntil(sockfd, "OT")) == -1){ //IF USER DOESN'T EXIST ON STARTUP
 							kill(pid,SIGKILL);
-							chatlist = removeChat(chatlist,t);
+						//	chatlist = removeChat(chatlist,t);
 						}
 					}
 					break;
@@ -157,7 +161,7 @@ int main(int argc, char** argv) {
 		    			if(strcmp(curr_chat->name,command->msg)==0){
 		    				hasChat = 1;
 		    				write(curr_chat->writefd,linebuf,strlen(command->msg)+strlen(" has logged off! "));
-		    				removeChat(chatlist, curr_chat);
+		    				//removeChat(chatlist, curr_chat);
 		    				break;
 		    			}
 		    			curr_chat = curr_chat->next;
@@ -297,6 +301,11 @@ chat* removeChat(chat* chats, chat* remChat){
 }
 
 void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name, char *msg) {
+	puts("msg");
+	puts(msg);
+	puts("strlen");
+	printf("%d\n", strlen(msg));
+	fflush(stdout);
 	char *args[11];
 	args[0] = "xterm";
 	args[1] = "-xrm";
@@ -563,12 +572,21 @@ cmd* parse_cmsg(char* in){
 	int pos = 0;
 	char* currChar = in; // cursor
 	while(*currChar != '\0') {
+		puts("pos");
+		printf("%d%s\n", pos, currChar);
+		fflush(stdout);
 		memset(in_msg, 0, strlen(in)+1); // clear in_msg
 		while(*currChar == ' ') // go until no more spaces
 			currChar++;
-		if(*currChar == '\0')
+		if(*currChar == '\0') {
+			puts("reached null");
+			fflush(stdout);
 			break;
-		if(pos == 2){
+		}
+		puts("did not reached null");
+		fflush(stdout);
+		if(pos == 2){ // only possible for /chat
+			puts("returning");
 			curr_cmd->msg = strdup(currChar);
 			free(in_msg);
 			return curr_cmd;
@@ -618,9 +636,11 @@ cmd* parse_cmsg(char* in){
 
 		// memset(in_msg, 0, sizeof(char)); // wut
 	}
-	free(in_msg); // code is unreachable (or should be)
-	Err_quit("Error: unexpected execution flow in parse_cmsg\n");
-	return NULL;
+	// code is reachable if reached \0 before reading all expected tokens
+	free(in_msg); 
+	return curr_cmd;
+	// Err_quit("Error: unexpected execution flow in parse_cmsg\n");
+	// return NULL;
 }
 
 void killchats() {
