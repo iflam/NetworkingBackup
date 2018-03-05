@@ -108,11 +108,13 @@ int main(int argc, char** argv) {
 							kill(pid,SIGKILL);
 						//	chatlist = removeChat(chatlist,t);
 						}
+						free(to_send);
 					}
 					break;
 				default:
 					Err_quit("Invalid cmdt\n");
 			}
+			FreeCmd(command);
 	    } //end of STDIN if
 
 	    /*SERVER PART */
@@ -232,6 +234,7 @@ int main(int argc, char** argv) {
 		    		break;
 		    }
 		    //write(client2chat[WRITE], linebuf, strlen(linebuf)); // write to chat window
+			FreeServerCmd(command);
 	    }	
 
 	    /*CHAT PART*/
@@ -249,7 +252,8 @@ int main(int argc, char** argv) {
 			    write(sockfd, linebuf, strlen(linebuf)); // write to server 
 				blockuntil(sockfd, "OT"); // problem
 				//curr_chat->waiting = true;
-			    free(command);
+			    FreeCmd(command);
+				free(to_send);
 	   		}
 	   		curr_chat = curr_chat->next;
 	   	}
@@ -565,7 +569,7 @@ typedef struct {
 	char* msg; //NULL when anything but CHAT
 } cmd;
 */
-cmd* parse_cmsg(char* in){
+cmd* parse_cmsg(char* in){ //malloc curr_cmd, in_msg
 	cmd* curr_cmd = (cmd*)malloc(sizeof(cmd));
 	char* in_msg = (char*)malloc((strlen(in)+1)); 
 	//memset(in_msg, 0, sizeof(char)); // wut
@@ -653,6 +657,14 @@ void killchats() {
 			close(curr_chat->writefd);
 		}
 		curr_chat = curr_chat->next;
+	}
+	FreeChats(chatlist);
+}
+void FreeChats(chat* curr) {
+	if(curr->next == NULL) free(curr);
+	else {
+		FreeChats(curr->next);
+		free(curr);
 	}
 }
 void Logout(int sockfd, char *username) {
@@ -771,4 +783,15 @@ void Exit(int x) {
 	shutdown(sockfd, SHUT_RDWR);
 	close(sockfd);
 	exit(x);
+}
+
+void FreeCmd(cmd *command) {
+	free(command->to);
+	free(command->msg);
+	free(command);
+}
+void FreeServerCmd(server_cmd *command) {
+	free(command->to);
+	free(command->msg);
+	free(command);
 }

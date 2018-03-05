@@ -65,6 +65,7 @@ struct chat{
     chat* next;
 };
 
+void FreeChats(chat*);
 chat* removeChat(chat* chats, chat* remChat);
 
 typedef enum cmd_type{HELP=1, LOG=2, LIST=3,CHAT=4,PRINT=5, ERR=6} Cmd_type;
@@ -73,6 +74,7 @@ typedef struct {
 	char* to; //NULL when anything but CHAT
 	char* msg; //NULL when anything but CHAT
 } cmd;
+void FreeCmd(cmd*);
 cmd* parse_cmsg(char* in);
 char* makeTo(char *to, char *msg);
 
@@ -83,6 +85,7 @@ typedef struct {
     char* msg; //NULL when not FROM or MOTD
     char** users; //NULL when not UTSIL
 } server_cmd;
+void FreeServerCmd(server_cmd*);
 
 server_cmd* parse_server_msg(char* in, Server_cmd_type type);
 char** make_users(char* string);
