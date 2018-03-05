@@ -96,7 +96,7 @@ def thread_function(clientsocket,buf):
                 if verbose: print("msg", msg) 
                 myname = sockdict[clientsocket]
                 if verbose: print("sending FROM", myname, msg)
-                sendString = f"FROM {myname} {msg}".encode() #TODO: Something here is going wrong. Might be from client though.
+                sendString = f"FROM {myname} {msg}\r\n\r\n".encode() #TODO: Something here is going wrong. Might be from client though.
                 if verbose: print("sendString", sendString)
                 sendLoc = namedict[name]
                 sendLoc.send(sendString)
