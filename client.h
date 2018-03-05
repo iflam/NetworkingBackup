@@ -55,6 +55,7 @@ void killchats();
 void Err_quit(const char *fmt, ...);
 void Err_sys(const char *fmt, ...);
 void Exit(int);
+void Close(int fd);
 
 typedef struct chat chat;
 struct chat{
@@ -66,6 +67,7 @@ struct chat{
 };
 
 void FreeChats(chat*);
+void FreeChat(chat*);
 chat* removeChat(chat* chats, chat* remChat);
 
 typedef enum cmd_type{HELP=1, LOG=2, LIST=3,CHAT=4,PRINT=5, ERR=6} Cmd_type;

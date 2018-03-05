@@ -115,7 +115,8 @@ int main(int argc, char** argv) {
 				default:
 					Err_quit("Invalid cmdt\n");
 			}
-			FreeCmd(command);
+			free(command);
+			//free(command->msg);
 	    } //end of STDIN if
 
 	    /*SERVER PART */
@@ -235,7 +236,8 @@ int main(int argc, char** argv) {
 		    		break;
 		    }
 		    //write(client2chat[WRITE], linebuf, strlen(linebuf)); // write to chat window
-			FreeServerCmd(command);
+			free(command);
+			//free(command->msg);
 	    }	
 
 	    /*CHAT PART*/
@@ -253,7 +255,8 @@ int main(int argc, char** argv) {
 			    write(sockfd, linebuf, strlen(linebuf)); // write to server 
 				blockuntil(sockfd, "OT"); // problem
 				//curr_chat->waiting = true;
-			    FreeCmd(command);
+			    free(command);
+				//free(command->msg);
 				free(to_send);
 	   		}
 	   		curr_chat = curr_chat->next;
@@ -667,17 +670,27 @@ void killchats() {
 }
 void FreeChats(chat* curr) {
 	if(curr == NULL) return;
-	if(curr->next == NULL) free(curr);
+	if(curr->next == NULL) { 
+		FreeChat(curr);
+	}
 	else {
 		FreeChats(curr->next);
-		free(curr);
+		FreeChat(curr);
 	}
 }
+void FreeChat(chat *c) {
+	Close(c->readfd);
+	Close(c->writefd);
+	c->readfd = -1;
+	c->writefd = -1;
+	free(c->name);
+	free(c);
+}
 void Logout(int sockfd, char *username) {
-	if(client2chat[0] != -1) close(client2chat[0]);
-	if(client2chat[0] != -1) close(client2chat[1]);
-	if(chat2client[0] != -1) close(chat2client[0]);
-	if(chat2client[0] != -1) close(chat2client[1]);
+	Close(client2chat[0]);
+	Close(client2chat[1]);
+	Close(chat2client[0]);
+	Close(chat2client[1]);
 	puts("Goodbye :(");
 	strcpy(linebuf, _BYE);
 	write(sockfd, linebuf, strlen(linebuf));
@@ -804,4 +817,7 @@ void FreeServerCmd(server_cmd *command) {
 	free(command->to);
 	free(command->msg);
 	free(command);
+}
+void Close(int fd) {
+	if(fd != -1) close(fd);
 }
