@@ -89,6 +89,7 @@ int main(int argc, char** argv) {
 						}
 						else msg = strtok(NULL, "\r\n\r\n");*/
 						CreateChatWindow(client2chat, chat2client, command->to, command->msg);
+						free(command->msg);
 					}
 					else { // parent
 						chat* t = malloc(sizeof(chat));
@@ -110,6 +111,7 @@ int main(int argc, char** argv) {
 						//	chatlist = removeChat(chatlist,t);
 						}
 						free(to_send);
+						free(command->msg);
 					}
 					break;
 				default:
