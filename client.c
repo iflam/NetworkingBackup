@@ -6,6 +6,7 @@ chat* chatlist = NULL;
 char *username;
 int sockfd;
 int maxfd = 2;
+int client2chat[2], chat2client[2]; // pipes
 
 void print_chats(){
 	printf("Server: readfd = %i\n",sockfd);
@@ -17,9 +18,11 @@ void print_chats(){
 }
 
 int main(int argc, char** argv) {
-	int client2chat[2], chat2client[2]; // pipes
 	pipe(client2chat);
 	pipe(chat2client);
+
+	signal(SIGINT,intHandler);
+	signal(SIGCHLD,sigchld_handler);
 
 	if(argc != ARGC)
 		Err_quit("usage: client <Name> <IPaddress> <port>\n");
@@ -34,8 +37,6 @@ int main(int argc, char** argv) {
 	ConnectSocket(sockfd, argv);
 
 	Login(sockfd, username);
-	signal(SIGINT,intHandler);
-	signal(SIGCHLD,sigchld_handler);
     fd_set rfds, rfds_init;
 
     FD_ZERO(&rfds_init);
@@ -673,6 +674,10 @@ void FreeChats(chat* curr) {
 	}
 }
 void Logout(int sockfd, char *username) {
+	if(client2chat[0] != -1) close(client2chat[0]);
+	if(client2chat[0] != -1) close(client2chat[1]);
+	if(chat2client[0] != -1) close(chat2client[0]);
+	if(chat2client[0] != -1) close(chat2client[1]);
 	puts("Goodbye :(");
 	strcpy(linebuf, _BYE);
 	write(sockfd, linebuf, strlen(linebuf));
