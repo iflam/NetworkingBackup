@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
 						}
 						else msg = strtok(NULL, "\r\n\r\n");*/
 						CreateChatWindow(client2chat, chat2client, command->to, command->msg);
-						free(command->msg);
+						//free(command->msg);
 					}
 					else { // parent
 						chat* t = malloc(sizeof(chat));
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 						//	chatlist = removeChat(chatlist,t);
 						}
 						free(to_send);
-						free(command->msg);
+						//free(command->msg);
 					}
 					break;
 				default:
@@ -313,11 +313,6 @@ chat* removeChat(chat* chats, chat* remChat){
 }
 
 void CreateChatWindow(int client2chat[2], int chat2client[2], char *to_name, char *msg) {
-	puts("msg");
-	puts(msg);
-	puts("strlen");
-	printf("%d\n", strlen(msg));
-	fflush(stdout);
 	char *args[11];
 	args[0] = "xterm";
 	args[1] = "-xrm";
@@ -584,9 +579,6 @@ cmd* parse_cmsg(char* in){ //malloc curr_cmd, in_msg
 	int pos = 0;
 	char* currChar = in; // cursor
 	while(*currChar != '\0') {
-		puts("pos");
-		printf("%d%s\n", pos, currChar);
-		fflush(stdout);
 		memset(in_msg, 0, strlen(in)+1); // clear in_msg
 		while(*currChar == ' ') // go until no more spaces
 			currChar++;
