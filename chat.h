@@ -21,3 +21,4 @@
 #define PROMPT KYEL "Me>> " 
 #define TPMORP KCYN ">> " 
 
+void termHandler(int sig);

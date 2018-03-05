@@ -1,6 +1,7 @@
 #include "incl.h"
 #include "chat.h"
 
+int client2chat, chat2client; // pipe ends
 int main(int argc, char *argv[]) {
 	char *name = argv[4];
 	char *tpmorp = calloc(strlen(KCYN)+strlen(name)+strlen(TPMORP)+1,sizeof(char));
@@ -8,7 +9,8 @@ int main(int argc, char *argv[]) {
 	strcat(tpmorp,name);
 	strcat(tpmorp,TPMORP);
 	char sendline[MAXLINE+1], recvline[MAXLINE+1];
-	int client2chat, chat2client; // pipe ends
+
+	signal(SIGTERM, termHandler);
 
 	if(argc != ARGC)
 		err_quit("usage: chat <client2chat pipefd> <chat2client pipefd> <msg> <name>\n");
@@ -53,3 +55,7 @@ int main(int argc, char *argv[]) {
 	}
 }
 
+void termHandler(int sig) {
+	close(client2chat);
+	close(chat2client);
+}

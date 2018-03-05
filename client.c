@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 						write(sockfd, linebuf, strlen(linebuf));
 						int err;
 						if((err = blockuntil(sockfd, "OT")) == -1){ //IF USER DOESN'T EXIST ON STARTUP
-							kill(pid,SIGKILL);
+							kill(pid,SIGTERM);
 						//	chatlist = removeChat(chatlist,t);
 						}
 						free(to_send);
@@ -272,6 +272,8 @@ void sigchld_handler(int signum){
 		while(curr_chat){
 			if(curr_chat->pid == pid){
 				curr_chat->pid = -1;
+				close(curr_chat->readfd);
+				close(curr_chat->writefd);
 				curr_chat->readfd = -1;
 				curr_chat->writefd = -1;
 			}
@@ -652,7 +654,7 @@ void killchats() {
 	while(curr_chat){
 		if(curr_chat->pid == -1){/*SKIP*/}
 		else{
-			kill(curr_chat->pid,SIGKILL);
+			kill(curr_chat->pid,SIGTERM);
 			close(curr_chat->readfd);
 			close(curr_chat->writefd);
 		}
