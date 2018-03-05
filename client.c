@@ -636,6 +636,8 @@ cmd* parse_cmsg(char* in){ //malloc curr_cmd, in_msg
 				curr_cmd->msg = strdup(in_msg); // TODO: this is incorrect for msg with spaces
 				break;
 			default:
+				perror("garbage command\n");
+				Logout(sockfd, username);
 				return NULL;
 				break;
 		}
