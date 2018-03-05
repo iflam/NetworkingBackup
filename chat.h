@@ -19,5 +19,5 @@
 #define KWHT  "\x1B[37m"
 
 #define PROMPT KYEL "Me>> " 
-#define TPMORP KCYN ">>" 
+#define TPMORP KCYN ">> " 
 
