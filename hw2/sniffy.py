@@ -1,11 +1,9 @@
 import argparse
 import socket
-from structs import ethernet
+from structs import Ethernet
+from readPackets import readPacket, stripEthernet, identifyProtocol, printPacket, hexdump
 
-MAX_PACKET_LEN = 100
-
-def hexdump():
-    print('hexdump')
+ETH_P_ALL = 3 # use to listen on promiscuous mode
 
 # returns a Namespace object (https://docs.python.org/3/library/argparse.html#argparse.Namespace)
 def parse():
@@ -26,19 +24,19 @@ if __name__=='__main__':
     print(args_dict) 
 
     INTERFACE = args_dict['INTERFACE']
-    ETH_P_ALL = 3
 
     with socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_ALL)) as sock:
         sock.bind((INTERFACE, 0))
-        while True:
-            packet = sock.recv(MAX_PACKET_LEN)
-            print(packet)
-            print(packet.hex())
-            ethernet_packet = ethernet.parse(packet)
-            print('mac_src', ethernet_packet['mac_src'].hex())
-            print('mac_dest', ethernet_packet['mac_dest'].hex())
 
-        # do things based on arguments here
-        if args_dict['hexdump']: # you check args in the dict by name (default name is the long option i.e. hexdump, not the short option i.e. x, even if user used the short option)
-            hexdump()
-
+        # main loop 
+        while True: 
+            packet = readPacket(sock) 
+            if args_dict['hexdump']:
+                hexdump(packet)
+            if not args_dict['filter'] or args_dict['filter'] == 'Ethernet':
+                printPacket(packet, Ethernet) # all packets have Ethernet on top
+            packet = stripEthernet(packet) # now we are interested in the rest of the packet
+            protocol = identifyProtocol(packet) 
+            if not args_dict['filter'] or args_dict['filter'] == protocol:
+                printPacket(packet, protocol)
+            

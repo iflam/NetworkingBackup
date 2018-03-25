@@ -1,6 +1,6 @@
 from construct import Struct, Bytes
 
-ethernet = Struct(
+Ethernet = Struct(
         'mac_src' / Bytes(6),
         'mac_dest' / Bytes(6)
         )
