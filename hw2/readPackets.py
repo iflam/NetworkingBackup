@@ -13,6 +13,11 @@ def printPacket(packet, protocol):
     if protocol == Ethernet:
         print('mac_src', parsed_packet['mac_src'].hex())
         print('mac_dest', parsed_packet['mac_dest'].hex())
+        print('type', parsed_packet['type'].hex())
+        print('version', parsed_packet.ip['version_hl'].hex())
+        print('length', parsed_packet.ip['total_length'].hex())
+        print('protocol',parsed_packet.ip['protocol'].hex())
+        print('destip',parsed_packet.ip['dest_ip'].hex())
     elif protocol == IP:
         pass # print IP fields
     elif protocol == ARP:
@@ -26,6 +31,9 @@ def printPacket(packet, protocol):
 def stripEthernet(packet):
     return packet
 
+#TODO
+def stripHeader(packet, size):
+    return packet
 # TODO: 
 # identify protocol based on packet header
 # note that packet contains the ethernet frame first, as currently implemented
