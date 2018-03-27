@@ -52,3 +52,4 @@ Ethernet = Struct(
         # ip = IP
         )
 ETHER_TYPE = { b'\x08\x00': IP }
+IP_TYPE = {}

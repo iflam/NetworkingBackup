@@ -1,6 +1,6 @@
 import argparse
 import socket
-from structs import Ethernet, ETHER_TYPE
+from structs import Ethernet, ETHER_TYPE, IP
 from readPackets import readPacket, stripHeader, printPacket, hexdump
 
 ETH_P_ALL = 3 # use to listen on promiscuous mode
@@ -39,6 +39,9 @@ if __name__=='__main__':
             protocol = ETHER_TYPE[parsed_packet['type']]
             packet = stripHeader(packet, Ethernet.sizeof()) # now we are interested in the rest of the packet
             print('STRIPPED ETHERNET:\n', packet)
+            parsed_packet = IP.parse(packet)
+            printPacket(parsed_packet, IP)
+
             #if not args_dict['filter'] or args_dict['filter'] == protocol:
             #    printPacket(packet, protocol)
             

@@ -1,4 +1,4 @@
-from structs import Ethernet
+from structs import Ethernet, IP
 
 MAX_PACKET_LEN = 100
 
@@ -14,10 +14,10 @@ def printPacket(parsed_packet, protocol):
         print('mac_dest', parsed_packet['mac_dest'].hex())
         print('type', parsed_packet['type'].hex())
     elif protocol == IP:
-        print('version', parsed_packet.ip['version_hl'].hex())
-        print('length', parsed_packet.ip['total_length'].hex())
-        print('protocol',parsed_packet.ip['protocol'].hex())
-        print('destip',parsed_packet.ip['dest_ip'].hex())
+        print('version', parsed_packet['version_hl'].hex())
+        print('length', parsed_packet['total_length'].hex())
+        print('protocol',parsed_packet['protocol'].hex())
+        print('destip',parsed_packet['dest_ip'].hex())
     elif protocol == ARP:
         pass # print ARP fields
     elif protocol == DNS:
