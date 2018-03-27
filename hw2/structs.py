@@ -50,6 +50,6 @@ Ethernet = Struct(
         'type' / Bytes(2),
         # ip = IP
         )
-ETHER_TYPE = { b'\x08\x00': IP }
+ETHER_TYPE = { b'\x08\x00': IP}
 IP_TYPE = {b'\x01': ICMP, b'\x06': TCP, b'\x11': UDP}
 DNS = "bloop"
