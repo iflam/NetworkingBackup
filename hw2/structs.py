@@ -63,5 +63,6 @@ Ethernet = Struct(
         # ip = IP
         )
 ETHER_TYPE = { b'\x08\x00': IP}
+DNS = "Bloop"	
 IP_TYPE = {b'\x01': ICMP, b'\x06': TCP, b'\x11': UDP}
-DNS = "bloop"
+TYPE_STR = {ICMP:"ICMP",TCP:"TCP",UDP:"UDP",DNS:"DNS", Ethernet:"Ethernet", IP:"IP"}

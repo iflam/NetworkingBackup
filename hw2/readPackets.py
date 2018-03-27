@@ -1,4 +1,4 @@
-from structs import Ethernet, IP, TCP, UDP, ICMP, DNS
+from structs import Ethernet, IP, TCP, UDP, ICMP, DNS, TYPE_STR, IP_TYPE
 
 MAX_PACKET_LEN = 100
 
@@ -9,6 +9,7 @@ def readPacket(sock):
 
 # protocol is of type Struct (i.e. something we define in structs.py)
 def printPacket(parsed_packet, protocol):
+    print(TYPE_STR[protocol])
     if protocol == Ethernet:
         print('mac_src', parsed_packet['mac_src'].hex())
         print('mac_dest', parsed_packet['mac_dest'].hex())

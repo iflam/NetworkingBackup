@@ -1,6 +1,6 @@
 import argparse
 import socket
-from structs import Ethernet, ETHER_TYPE, IP, IP_TYPE
+from structs import Ethernet, ETHER_TYPE, IP, IP_TYPE, TYPE_STR
 from readPackets import readPacket, stripHeader, printPacket, hexdump
 
 ETH_P_ALL = 3 # use to listen on promiscuous mode
@@ -46,11 +46,14 @@ if __name__=='__main__':
             
             #parse IP
             ip_packet = IP.parse(packet)
-            printPacket(ip_packet, IP)
+            if not args_dict['filter'] or args_dict['filter'] == 'IP':
+            	printPacket(ip_packet, IP)
             packet = stripHeader(packet, IP.sizeof()) #now we are interested in the rest of the stuff
 
             #parse TCP/UDP/ICMP
             ip_type = IP_TYPE[ip_packet['protocol']]
+            if TYPE_STR[ip_type] != args_dict['filter']:
+            	continue
             transport_packet = ip_type.parse(packet)
             printPacket(transport_packet, ip_type)
 
