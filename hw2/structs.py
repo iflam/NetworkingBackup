@@ -9,6 +9,10 @@ TCP = Struct(
 	)
 
 UDP = Struct(
+        'src_port' / Bytes(2),
+        'dest_port' / Bytes(2),
+        'length' / Bytes(2),
+        'checksum' / Bytes(2),
 
 	)
 

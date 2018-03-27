@@ -50,7 +50,9 @@ if __name__=='__main__':
             packet = stripHeader(packet, IP.sizeof()) #now we are interested in the rest of the stuff
 
             #parse TCP/UDP/ICMP
-            transport_packet = IP_TYPE[ip_packet['protocol']].parse(packet)
+            ip_type = IP_TYPE[ip_packet['protocol']]
+            transport_packet = ip_type.parse(packet)
+            printPacket(transport_packet, ip_type)
 
 
             #if not args_dict['filter'] or args_dict['filter'] == protocol:
