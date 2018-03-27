@@ -15,7 +15,6 @@ UDP = Struct(
 # IP level protocols
 def protocolType(protocol):
 	if protocol == 1:
-		print("I am ICMP")
 		return ICMP
 	elif protocol == 6:
 		return TCP
@@ -52,4 +51,5 @@ Ethernet = Struct(
         # ip = IP
         )
 ETHER_TYPE = { b'\x08\x00': IP }
-IP_TYPE = {}
+IP_TYPE = {b'\x01': ICMP, b'\x06': TCP, b'\x11': UDP}
+DNS = "bloop"

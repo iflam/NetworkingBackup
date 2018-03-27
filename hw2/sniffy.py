@@ -30,18 +30,26 @@ if __name__=='__main__':
 
         # main loop 
         while True: 
+        	#Receive Packet
             packet = readPacket(sock) 
             if args_dict['hexdump']:
                 hexdump(packet)
-            parsed_packet = Ethernet.parse(packet)
+            #parse Ethernet
+            ethernet_packet = Ethernet.parse(packet)
             if not args_dict['filter'] or args_dict['filter'] == 'Ethernet':
-                printPacket(parsed_packet, Ethernet) # all packets have Ethernet on top
-            protocol = ETHER_TYPE[parsed_packet['type']]
+                printPacket(ethernet_packet, Ethernet) # all packets have Ethernet on top
+            protocol = ETHER_TYPE[ethernet_packet['type']]
             packet = stripHeader(packet, Ethernet.sizeof()) # now we are interested in the rest of the packet
-            print('STRIPPED ETHERNET:\n', packet)
-            parsed_packet = IP.parse(packet)
-            printPacket(parsed_packet, IP)
+            
+            #parse IP
+            ip_packet = IP.parse(packet)
+            printPacket(ip_packet, IP)
+            packet = stripHeader(packet, IP.sizeof()) #now we are interested in the rest of the stuff
 
+            #parse TCP/UDP/ICMP
+            transport_packet = ip_packet['protocol'].parse(packet)
+            
+            
             #if not args_dict['filter'] or args_dict['filter'] == protocol:
             #    printPacket(packet, protocol)
             
