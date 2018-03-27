@@ -1,4 +1,4 @@
-from structs import Ethernet, IP
+from structs import Ethernet, IP, TCP, UDP, ICMP, DNS
 
 MAX_PACKET_LEN = 100
 
@@ -18,12 +18,20 @@ def printPacket(parsed_packet, protocol):
         print('length', parsed_packet['total_length'].hex())
         print('protocol',parsed_packet['protocol'].hex())
         print('destip',parsed_packet['dest_ip'].hex())
-    elif protocol == ARP:
-        pass # print ARP fields
     elif protocol == DNS:
         pass # print DNS fields
     elif protocol == ICMP:
         pass # print ICMP fields
+    elif protocol == TCP:
+        print('src_port', parsed_packet['src_port'].hex())
+        print('dest_port', parsed_packet['dest_port'].hex())
+        print('sequence number', parsed_packet['sequence_number'].hex())
+        print('ack_number', parsed_packet['ack_number'].hex())
+        print('doff_res_ns', parsed_packet['doff_res_ns'].hex())
+        print('flags', parsed_packet['flags'].hex())
+        print('window_size', parsed_packet['window_size'].hex())
+        print('checksum', parsed_packet['checksum'].hex())
+        print('urg_ptr', parsed_packet['urg_ptr'].hex())
 
 # TODO 
 def stripEthernet(packet):

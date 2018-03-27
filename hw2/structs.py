@@ -5,7 +5,15 @@ ICMP = Struct(
 	)
 
 TCP = Struct(
-
+	'src_port' / Bytes(2),
+	'dest_port' / Bytes(2),
+	'sequence_number' / Bytes(4),
+	'ack_number' / Bytes(4),
+	'doff_res_ns' / Bytes(1), #4 bytes data offset, 3 bytes reserve, 1 byte NS
+	'flags' / Bytes(1),
+	'window_size' / Bytes(2),
+	'checksum' / Bytes(2),
+	'urg_ptr' / Bytes(2)
 	)
 
 UDP = Struct(
