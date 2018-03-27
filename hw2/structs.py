@@ -1,19 +1,22 @@
-from construct import Struct, Bytes
+from construct import Struct, Bytes, BitStruct, Bit, BitsInteger, Octet, Bytewise
 
 ICMP = Struct(
 
 	)
 
-TCP = Struct(
-	'src_port' / Bytes(2),
-	'dest_port' / Bytes(2),
-	'sequence_number' / Bytes(4),
-	'ack_number' / Bytes(4),
-	'doff_res_ns' / Bytes(1), #4 bytes data offset, 3 bytes reserve, 1 byte NS
-	'flags' / Bytes(1),
-	'window_size' / Bytes(2),
-	'checksum' / Bytes(2),
-	'urg_ptr' / Bytes(2)
+TCP = BitStruct(
+	'src_port' / Bytewise(Bytes(2)),
+	'dest_port' / Bytewise(Bytes(2)),
+	'sequence_number' / Bytewise(Bytes(4)),
+	'ack_number' / Bytewise(Bytes(4)),
+	#'doff_res_ns' / Bytewise(Bytes(1)), #4 bytes data offset, 3 bytes reserve, 1 byte NS
+	'doff' / BitsInteger(4), #4 bytes data offset, 3 bytes reserve, 1 byte NS
+	'res' / BitsInteger(3), #4 bytes data offset, 3 bytes reserve, 1 byte NS
+	'ns' / BitsInteger(1), #4 bytes data offset, 3 bytes reserve, 1 byte NS
+	'flags' / Bytewise(Bytes(1)),
+	'window_size' / Bytewise(Bytes(2)),
+	'checksum' / Bytewise(Bytes(2)),
+	'urg_ptr' / Bytewise(Bytes(2))
 	)
 
 UDP = Struct(
@@ -35,22 +38,24 @@ def protocolType(protocol):
 	else:
 		return None
 
-IP = Struct(
+IP = BitStruct(
 	#word 1
-	'version_hl' / Bytes(1), #This is 4bits vers 4bits header length
-	'dscp' / Bytes(1), #Differentiated Services
-	'total_length' / Bytes(2),
+	'version' / BitsInteger(4), #This is 4bits vers 4bits header length
+	'hl' / BitsInteger(4), #This is 4bits vers 4bits header length
+	'dscp' / Bytewise(Bytes(1)), #Differentiated Services
+	'total_length' / Bytewise(Bytes(2)),
 	#word 2
-	'identification' / Bytes(2),
-	'flags_and_fragoff' / Bytes(2), #3 bits for flags, 13 for fragment offset
+	'identification' / Bytewise(Bytes(2)),
+	'flags' / BitsInteger(3), #3 bits for flags, 13 for fragment offset
+	'fragoff' / BitsInteger(13), #3 bits for flags, 13 for fragment offset
 	#word 3
-	'time_to_live' / Bytes(1),
-	'protocol' / Bytes(1),
-	'checksum' / Bytes(2), #header checksum
+	'time_to_live' / Bytewise(Bytes(1)),
+	'protocol' / Bytewise(Bytes(1)),
+	'checksum' / Bytewise(Bytes(2)), #header checksum
 	#word 4
-	'src_ip' / Bytes(4),
+	'src_ip' / Bytewise(Bytes(4)),
 	#word 5
-	'dest_ip' / Bytes(4),
+	'dest_ip' / Bytewise(Bytes(4)),
 	#If header length is greater than 5:
 	#'options' / Bits(32)
 	# data = protocolType(IP['protocol'].hex()) #TODO: GET THIS LINE WORKING

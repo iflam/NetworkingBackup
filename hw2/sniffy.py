@@ -52,10 +52,9 @@ if __name__=='__main__':
 
             #parse TCP/UDP/ICMP
             ip_type = IP_TYPE[ip_packet['protocol']]
-            if TYPE_STR[ip_type] != args_dict['filter']:
-            	continue
             transport_packet = ip_type.parse(packet)
-            printPacket(transport_packet, ip_type)
+            if not args_dict['filter'] or args_dict['filter'] == TYPE_STR[ip_type]:
+                printPacket(transport_packet, ip_type)
 
             #if not args_dict['filter'] or args_dict['filter'] == protocol:
             #    printPacket(packet, protocol)
