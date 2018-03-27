@@ -8,18 +8,16 @@ def readPacket(sock):
     return packet
 
 # protocol is of type Struct (i.e. something we define in structs.py)
-def printPacket(packet, protocol):
-    parsed_packet = protocol.parse(packet)
+def printPacket(parsed_packet, protocol):
     if protocol == Ethernet:
         print('mac_src', parsed_packet['mac_src'].hex())
         print('mac_dest', parsed_packet['mac_dest'].hex())
         print('type', parsed_packet['type'].hex())
+    elif protocol == IP:
         print('version', parsed_packet.ip['version_hl'].hex())
         print('length', parsed_packet.ip['total_length'].hex())
         print('protocol',parsed_packet.ip['protocol'].hex())
         print('destip',parsed_packet.ip['dest_ip'].hex())
-    elif protocol == IP:
-        pass # print IP fields
     elif protocol == ARP:
         pass # print ARP fields
     elif protocol == DNS:
@@ -33,13 +31,7 @@ def stripEthernet(packet):
 
 #TODO
 def stripHeader(packet, size):
-    return packet
-# TODO: 
-# identify protocol based on packet header
-# note that packet contains the ethernet frame first, as currently implemented
-# you can either change this outside this function (remove the ethernet frame from the packet before calling identifyProtocol) or simply skip over the ethernet frame here
-def identifyProtocol(packet):
-    pass
+    return packet[size:]
 
 def hexdump(packet):
     print(packet) # prints as bytes object (for debugging, later remove)

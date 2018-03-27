@@ -12,6 +12,7 @@ UDP = Struct(
 
 	)
 
+# IP level protocols
 def protocolType(protocol):
 	if protocol == 1:
 		print("I am ICMP")
@@ -41,13 +42,13 @@ IP = Struct(
 	'dest_ip' / Bytes(4),
 	#If header length is greater than 5:
 	#'options' / Bits(32)
-	data = protocolType(IP['protocol'].hex()) #TODO: GET THIS LINE WORKING
+	# data = protocolType(IP['protocol'].hex()) #TODO: GET THIS LINE WORKING
 	)
 
 Ethernet = Struct(
         'mac_dest' / Bytes(6),
         'mac_src' / Bytes(6),
         'type' / Bytes(2),
-        ip = IP
+        # ip = IP
         )
-
+ETHER_TYPE = { b'\x08\x00': IP }
