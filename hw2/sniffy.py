@@ -54,7 +54,6 @@ if __name__=='__main__':
             transport_packet = ip_type.parse(packet)
             printPacket(transport_packet, ip_type)
 
-
             #if not args_dict['filter'] or args_dict['filter'] == protocol:
             #    printPacket(packet, protocol)
             
