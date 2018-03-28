@@ -1,7 +1,10 @@
 from construct import Struct, Bytes, BitStruct, Bit, BitsInteger, Octet, Bytewise
 
 ICMP = Struct(
-
+	'type' / Bytewise(Bytes(1)),
+	'code' / Bytewise(Bytes(1)),
+	'checksum' / Bytewise(Bytes(2)),
+	'rest' / Bytewise(Bytes(4))
 	)
 
 TCP = BitStruct(
@@ -25,6 +28,18 @@ UDP = Struct(
         'length' / Bytes(2),
         'checksum' / Bytes(2),
 
+	)
+
+DNS = BitStruct(
+	 'identification' / Bytewise(Bytes(2)),
+	 'qr' / BitsInteger(1),
+	 'opcode' / BitsInteger(4),
+	 'flags' / BitsInteger(7),
+	 'rcode' / BitsInteger(4),
+	 'total_questions' / Bytewise(Bytes(2)),
+	 'total_answer' / Bytewise(Bytes(2)),
+	 'total_authority' / Bytewise(Bytes(2)),
+	 'total_additional' / Bytewise(Bytes(2)),
 	)
 
 # IP level protocols
