@@ -1,5 +1,5 @@
-from structs import Ethernet, IP, TCP, UDP, ICMP, DNS, TYPE_STR, IP_TYPE, scHeader, idBlock, epBlock
-
+from structs import Ethernet, IP, TCP, UDP, ICMP, DNS, TYPE_STR, IP_TYPE
+import time
 MAX_PACKET_LEN = 100
 
 # read a full packet and build ethernet Struct
@@ -56,8 +56,13 @@ def printSbHeader(length): #Length is passed as integer
     sb['minor'] = b"\x00\x00"
     sb['sec_len'] = length.to_bytes(4,byteorder='big')
     sb['blockTLength2'] = b"\x00\x00\x00\x16"
+    s = b""
+    for x in sb:
+        s+=sb[x]
+    #return sb['blockType']+sb['blockTLength']+sb['byteOrderMagic']+sb['major']+sb['minor']+sb['sec_len']+sb['blockTLength2']
+    return s
 
-def printIdBlock(blocktype,linktype): #blocktype, linktype passed as saved in struct
+def printIdBlock(linktype): #blocktype, linktype passed as saved in struct
     # 'blockType' = Bytes(4),
     # 'blockTLength' = Bytes(4),
     # 'linkType' = Bytes(2),
@@ -66,15 +71,19 @@ def printIdBlock(blocktype,linktype): #blocktype, linktype passed as saved in st
     # 'options' = Bytes(0),
     # 'blockTLength2' = Bytes(4)
     idb = {}
-    idb['blockType'] =  blocktype
+    idb['blockType'] =  b"\x00\x00\x00\x01"
     idb['blockTLength'] = b"\x00\x00\x00\x14"
     idb['linkType'] = linktype
     idb['res'] = b"\x00\x00"
     idb['snapLen'] = b"\x00\x00"
     idb['blockTLength2'] = b"\x00\x00\x00\x14"
+    s = b""
+    for x in idb:
+        s+=idb[x]
+    return s
 
 
-def printEpBlock(fields): #pass as array
+def printEpBlock(data): #pass as array
     # 'blockType' = Bytes(4),
     # 'blockTLength' = Bytes(4),
     # 'interfaceID' = Bytes(4),
@@ -85,5 +94,16 @@ def printEpBlock(fields): #pass as array
     # 'packet_data' = Bytes(this.capturedp_len)
     # 'options' = Bytes(0),
     # 'blockTLength2' = Bytes(4)
+    data+= b"\0"*(len(data)%32)
     epb = {}
-    epb['blockType'] = fields[0]
+    epb['blockType'] = b"\x00\x00\x00\x01"
+    epb['blockTLength'] = (32+len(data)).to_bytes(4,byteorder='big')
+    epb['timestamp'] = str(time.time()).encode()
+    epb['capturedp_len'] = len(data).to_bytes(4,byteorder='big')
+    epb['origp_len'] = len(data).to_bytes(4,byteorder='big')
+    epb['data'] = data
+    epb['blockTLength2'] = (32+len(data)).to_bytes(4,byteorder='big')
+    s = b""
+    for x in epb:
+        s+=epb[x]
+    return s

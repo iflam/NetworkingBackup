@@ -1,6 +1,6 @@
 import argparse
 import socket
-from structs import Ethernet, ETHER_TYPE, IP, IP_TYPE, TYPE_STR
+from structs import Ethernet, ETHER_TYPE, IP, IP_TYPE, TYPE_STR, UDP, DNS
 from readPackets import readPacket, stripHeader, printPacket, hexdump, printpcap
 
 ETH_P_ALL = 3 # use to listen on promiscuous mode
@@ -55,8 +55,15 @@ if __name__=='__main__':
             transport_packet = ip_type.parse(packet)
             if not args_dict['filter'] or args_dict['filter'] == TYPE_STR[ip_type]:
                 printPacket(transport_packet, ip_type)
-                printpcap("hi",packet,ip_type)
-
+                #printpcap("hi",packet,ip_type)
+            packet = stripHeader(packet, ip_type.sizeof())
+            #DNS
+            if ip_type == UDP:
+            	print('dest_port' , ":", transport_packet['dest_port'].hex())
+            	print('src_port' , ":", transport_packet['src_port'].hex())
+            	if transport_packet['dest_port'] == b"\x00\x35" or transport_packet['src_port'] == b"\x00\x35":
+            		dns_packet = DNS.parse(packet)
+            		printPacket(dns_packet, DNS)
             #if not args_dict['filter'] or args_dict['filter'] == protocol:
             #    printPacket(packet, protocol)
             

@@ -1,36 +1,4 @@
 from construct import Struct, Bytes, BitStruct, Bit, BitsInteger, Octet, Bytewise
-sbHeader = Struct(
-	'blockType' = Bytes(4),
-	'blockTLength' = Bytes(4),
-	'byteOrderMagic' = Bytes(4),
-	'major' = Bytes(2),
-	'minor' = Bytes(2),
-	'sec_len' = Bytes(4),
-	'options' = Bytes(0),
-	'blocktLength2' = Bytes(4)
-)
-idBlock = Struct(
-	'blockType' = Bytes(4),
-	'blockTLength' = Bytes(4),
-	'linkType' = Bytes(2),
-	'res' = Bytes(2),
-	'snapLen' = Bytes(4),
-	'options' = Bytes(0),
-	'blockTLength2' = Bytes(4)
-	)
-epBlock = Struct(
-	'blockType' = Bytes(4),
-	'blockTLength' = Bytes(4),
-	'interfaceID' = Bytes(4),
-	'ts_high' = Bytes(4),
-	'ts_low' = Bytes(4),
-	'capturedp_len' = Bytes(4),
-	'origp_len' = Bytes(4),
-	'packet_data' = Bytes(this.capturedp_len)
-	'options' = Bytes(0),
-	'blockTLength2' = Bytes(4)
-	)
-
 ICMP = Struct(
 	'type' / Bytewise(Bytes(1)),
 	'code' / Bytewise(Bytes(1)),
@@ -113,7 +81,6 @@ Ethernet = Struct(
         'type' / Bytes(2),
         # ip = IP
         )
-ETHER_TYPE = { b'\x08\x00': IP}
-DNS = "Bloop"	
+ETHER_TYPE = { b'\x08\x00': IP}	
 IP_TYPE = {b'\x01': ICMP, b'\x06': TCP, b'\x11': UDP}
 TYPE_STR = {ICMP:"ICMP",TCP:"TCP",UDP:"UDP",DNS:"DNS", Ethernet:"Ethernet", IP:"IP"}
