@@ -1,4 +1,4 @@
-from structs import Ethernet, IP, TCP, UDP, ICMP, DNS, TYPE_STR, IP_TYPE
+from structs import Ethernet, IP, TCP, UDP, ICMP, DNS, TYPE_STR, IP_TYPE, SBH, IDB
 import time
 MAX_PACKET_LEN = 100
 
@@ -32,14 +32,7 @@ def hexdump(packet):
     print(packet.hex()) # prints as hex
     # TODO: maybe check out that hexdump library to pretty print hex
 
-def printpcap(outfile, packet, ip_type):
-    test = ["1","2","3","4","5","6","7","8","9"]
-    printSbHeader(test)
-    printIdBlock(test)
-    printEpBlock(test)
-
-
-def printSbHeader(length): #Length is passed as integer
+def getSbHeader(f): #Length is passed as integer
     # 'blockType' = Bytes(4),
     # 'blockTLength' = Bytes(4),
     # 'byteOrderMagic' = Bytes(4),
@@ -48,21 +41,20 @@ def printSbHeader(length): #Length is passed as integer
     # 'sec_len' = Bytes(4),
     # 'options' = Bytes(0),
     # 'blocktLength2' = Bytes(4)
-    sb = {}
-    sb['blockType'] = b"\x0A\x0D\x0D\x0A"
-    sb['blockTLength'] = b"\x00\x00\x00\x16"
-    sb['byteOrderMagic'] = b"\x1a\x2b\x3c\x4d"
-    sb['major'] = b"\x00\x01"
-    sb['minor'] = b"\x00\x00"
-    sb['sec_len'] = length.to_bytes(4,byteorder='big')
-    sb['blockTLength2'] = b"\x00\x00\x00\x16"
-    s = b""
-    for x in sb:
-        s+=sb[x]
-    #return sb['blockType']+sb['blockTLength']+sb['byteOrderMagic']+sb['major']+sb['minor']+sb['sec_len']+sb['blockTLength2']
-    return s
 
-def printIdBlock(linktype): #blocktype, linktype passed as saved in struct
+    #hardcoded values:
+
+    sb = {}
+    sb['blockType'] = 0x0A0D0D0A
+    sb['blockTLength'] = 28
+    sb['byteOrderMagic'] = 0x1A2B3C4D
+    sb['major'] = 1
+    sb['minor'] = 0
+    sb['sec_len'] = 0
+    sb['blockTLength2'] = 28
+    f.write(SBH.build(sb))
+
+def getIdBlock(f): #blocktype, linktype passed as saved in struct
     # 'blockType' = Bytes(4),
     # 'blockTLength' = Bytes(4),
     # 'linkType' = Bytes(2),
@@ -70,20 +62,20 @@ def printIdBlock(linktype): #blocktype, linktype passed as saved in struct
     # 'snapLen' = Bytes(4),
     # 'options' = Bytes(0),
     # 'blockTLength2' = Bytes(4)
+
+    #hardcoded values
+
     idb = {}
-    idb['blockType'] =  b"\x00\x00\x00\x01"
-    idb['blockTLength'] = b"\x00\x00\x00\x14"
-    idb['linkType'] = linktype
-    idb['res'] = b"\x00\x00"
-    idb['snapLen'] = b"\x00\x00"
-    idb['blockTLength2'] = b"\x00\x00\x00\x14"
-    s = b""
-    for x in idb:
-        s+=idb[x]
-    return s
+    idb['blockType'] =  0x00000001
+    idb['blockTLength'] = 20
+    idb['linkType'] = 1
+    idb['res'] = 0
+    idb['snapLen'] = 0
+    idb['blockTLength2'] = 20
+    f.write(IDB.build(idb))
 
 
-def printEpBlock(data): #pass as array
+def getEpBlock(data): #pass as array
     # 'blockType' = Bytes(4),
     # 'blockTLength' = Bytes(4),
     # 'interfaceID' = Bytes(4),
@@ -94,13 +86,16 @@ def printEpBlock(data): #pass as array
     # 'packet_data' = Bytes(this.capturedp_len)
     # 'options' = Bytes(0),
     # 'blockTLength2' = Bytes(4)
-    data+= b"\0"*(len(data)%32)
+    dataLen = len(data)
+    padAmt = 4-len(data)%4 if len(data) % 4 else 0
+    data += (b"\x00"*padAmt)
     epb = {}
-    epb['blockType'] = b"\x00\x00\x00\x01"
+    epb['blockType'] = (6).to_bytes(4,byteorder='big')
     epb['blockTLength'] = (32+len(data)).to_bytes(4,byteorder='big')
-    epb['timestamp'] = str(time.time()).encode()
-    epb['capturedp_len'] = len(data).to_bytes(4,byteorder='big')
-    epb['origp_len'] = len(data).to_bytes(4,byteorder='big')
+    epb['interfaceID'] = b"\x00\x00\x00\x00"
+    epb['timestamp'] = int(round(time.time()*1000000)).to_bytes(8,byteorder='big')
+    epb['capturedp_len'] = dataLen.to_bytes(4,byteorder='big')
+    epb['origp_len'] = dataLen.to_bytes(4,byteorder='big')
     epb['data'] = data
     epb['blockTLength2'] = (32+len(data)).to_bytes(4,byteorder='big')
     s = b""
