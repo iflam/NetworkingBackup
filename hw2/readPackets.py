@@ -1,5 +1,5 @@
-from structs import Ethernet, IP, TCP, UDP, ICMP, DNS, TYPE_STR, IP_TYPE
-
+from structs import Ethernet, IP, TCP, UDP, ICMP, DNS, TYPE_STR, IP_TYPE, SBH, IDB
+import time
 MAX_PACKET_LEN = 100
 
 # read a full packet and build ethernet Struct
@@ -32,96 +32,73 @@ def hexdump(packet):
     print(packet.hex()) # prints as hex
     # TODO: maybe check out that hexdump library to pretty print hex
 
-def printpcap(outfile, packet, ip_type):
-    test = ["1","2","3","4","5","6","7","8","9"]
-    printSbHeader(test)
-    printIdBlock(test)
-    printEpBlock(test)
+def getSbHeader(f): #Length is passed as integer
+    # 'blockType' = Bytes(4),
+    # 'blockTLength' = Bytes(4),
+    # 'byteOrderMagic' = Bytes(4),
+    # 'major' = Bytes(2),
+    # 'minor' = Bytes(2),
+    # 'sec_len' = Bytes(4),
+    # 'options' = Bytes(0),
+    # 'blocktLength2' = Bytes(4)
+
+    #hardcoded values:
+
+    sb = {}
+    sb['blockType'] = 0x0A0D0D0A
+    sb['blockTLength'] = 28
+    sb['byteOrderMagic'] = 0x1A2B3C4D
+    sb['major'] = 1
+    sb['minor'] = 0
+    sb['sec_len'] = 0
+    sb['blockTLength2'] = 28
+    f.write(SBH.build(sb))
+
+def getIdBlock(f): #blocktype, linktype passed as saved in struct
+    # 'blockType' = Bytes(4),
+    # 'blockTLength' = Bytes(4),
+    # 'linkType' = Bytes(2),
+    # 'res' = Bytes(2),
+    # 'snapLen' = Bytes(4),
+    # 'options' = Bytes(0),
+    # 'blockTLength2' = Bytes(4)
+
+    #hardcoded values
+
+    idb = {}
+    idb['blockType'] =  0x00000001
+    idb['blockTLength'] = 20
+    idb['linkType'] = 1
+    idb['res'] = 0
+    idb['snapLen'] = 0
+    idb['blockTLength2'] = 20
+    f.write(IDB.build(idb))
 
 
-def printSbHeader(fields):
-    breakLine ="   +"+"-"*63+"+"
-    breakLine2 ="   +"+"-+"*32
-    print("   0                   1                   2                   3")
-    print("   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1")
-    print(breakLine)
-    a,b = 1,2
-    print(' 0 | {0:^62}|'.format("Block Type = " + fields[0]))
-    print(breakLine)
-    print(' 4 | {0:^62}|'.format("Block Total Length = " + fields[1]))
-    print(breakLine2)
-    print(' 8 | {0:^62}|'.format("Byte-Order Magic = " + fields[2]))
-    print(breakLine2)
-    print('12 |{0:^31}|{0:^31}|'.format(fields[3],fields[4]))
-    print(breakLine2)
-    print('16 |'+' '*63+'|')
-    print('   |{0:^63}|'.format("Section Length = " + fields[5]))
-    print('   |'+' '*63+'|')
-    print(breakLine2)
-    print('24 /'+' '*63+'/')
-    print('   /{0:^63}/'.format("Options (variable) = " + fields[6]))
-    print('   /'+' '*63+'/')
-    print(breakLine2)
-    print('   | {0:^62}|'.format("Block Total Length = " + fields[7]))
-    print(breakLine)
-
-def printIdBlock(fields):
-    breakLine ="   +"+"-"*63+"+"
-    breakLine2 ="   +"+"-+"*32
-
-    print("   0                   1                   2                   3")
-    print("   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1")
-    print(breakLine)
-    a,b = 1,2
-    print(' 0 | {0:^62}|'.format("Block Type = " + fields[0]))
-    print(breakLine)
-    print(' 4 | {0:^62}|'.format("Byte-Order Magic = " + fields[1]))
-    print(breakLine2)
-    print(' 8 |{0:^31}|{0:^31}|'.format(fields[2],fields[3]))
-    print(breakLine2)
-    print('12 |{0:^63}|'.format("SpanLen = " + fields[4]))
-    print(breakLine2)
-    print('16 /'+' '*63+'/')
-    print('   /{0:^63}/'.format("Options (variable) = " + fields[5]))
-    print('   /'+' '*63+'/')
-    print(breakLine2)
-    print('   | {0:^62}|'.format("Block Total Length = " + fields[6]))
-    print(breakLine)
-
-def printEpBlock(fields):
-    breakLine ="   +"+"-"*63+"+"
-    breakLine2 ="   +"+"-+"*32
-
-    print("   0                   1                   2                   3")
-    print("   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1")
-    print(breakLine)
-    a,b = 1,2
-    print(' 0 | {0:^62}|'.format("Block Type = " + fields[0]))
-    print(breakLine)
-    ##
-
-    print(' 4 | {0:^62}|'.format("Block Total Length = " + fields[0]))
-    print(breakLine2)
-    print(' 8 | {0:^62}|'.format("Interface ID = " + fields[1]))
-    print(breakLine2)
-    print('12 | {0:^62}|'.format("Timestamp (High) = " + fields[2]))
-    print(breakLine2)
-    print('16 | {0:^62}|'.format("Timestamp (Low) = " + fields[3]))
-    print(breakLine2)
-    print('20 | {0:^62}|'.format("Captured Packet Length = " + fields[4]))
-    print(breakLine2)
-    print('24 | {0:^62}|'.format("Original Packet Length = " + fields[5]))
-    print(breakLine2)
-    print('28 /'+' '*63+'/')
-    print('   /{0:^63}/'.format("Packet Data = " + fields[6]))
-    print('   /'+' '*63+'/')
-    ##
-    print(breakLine2)
-    print('32 /'+' '*63+'/')
-    print('   /{0:^63}/'.format("Options (variable) = " + fields[7]))
-    print('   /'+' '*63+'/')
-    print(breakLine2)
-    print('   | {0:^62}|'.format("Block Total Length = " + fields[8]))
-    print(breakLine)
-
-
+def getEpBlock(data): #pass as array
+    # 'blockType' = Bytes(4),
+    # 'blockTLength' = Bytes(4),
+    # 'interfaceID' = Bytes(4),
+    # 'ts_high' = Bytes(4),
+    # 'ts_low' = Bytes(4),
+    # 'capturedp_len' = Bytes(4),
+    # 'origp_len' = Bytes(4),
+    # 'packet_data' = Bytes(this.capturedp_len)
+    # 'options' = Bytes(0),
+    # 'blockTLength2' = Bytes(4)
+    dataLen = len(data)
+    padAmt = 4-len(data)%4 if len(data) % 4 else 0
+    data += (b"\x00"*padAmt)
+    epb = {}
+    epb['blockType'] = (6).to_bytes(4,byteorder='big')
+    epb['blockTLength'] = (32+len(data)).to_bytes(4,byteorder='big')
+    epb['interfaceID'] = b"\x00\x00\x00\x00"
+    epb['timestamp'] = int(round(time.time()*1000000)).to_bytes(8,byteorder='big')
+    epb['capturedp_len'] = dataLen.to_bytes(4,byteorder='big')
+    epb['origp_len'] = dataLen.to_bytes(4,byteorder='big')
+    epb['data'] = data
+    epb['blockTLength2'] = (32+len(data)).to_bytes(4,byteorder='big')
+    s = b""
+    for x in epb:
+        s+=epb[x]
+    return s

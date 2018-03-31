@@ -1,10 +1,9 @@
 from construct import Struct, Bytes, BitStruct, Bit, BitsInteger, Octet, Bytewise
-
 ICMP = Struct(
-	'type' / Bytewise(Bytes(1)),
-	'code' / Bytewise(Bytes(1)),
-	'checksum' / Bytewise(Bytes(2)),
-	'rest' / Bytewise(Bytes(4))
+	'type' / Bytes(1),
+	'code' / Bytes(1),
+	'checksum' / Bytes(2),
+	'rest' / Bytes(4)
 	)
 
 TCP = BitStruct(
@@ -29,6 +28,24 @@ UDP = Struct(
         'checksum' / Bytes(2),
 
 	)
+SBH = Struct(
+	'blockType' / Bytes(4),
+	'blockTLength' / Bytes(4),
+	'byteOrderMagic' / Bytes(4),
+	'major' / Bytes(2),
+	'minor' / Bytes(2),
+	'sec_len' / Bytes(8),
+	'blockTLength2' / Bytes(4)
+	)
+
+IDB = Struct(
+    'blockType' / Bytes(4),
+    'blockTLength' / Bytes(4),
+    'linkType' / Bytes(4),
+    'res' / Bytes(2),
+    'snapLen' / Bytes(2),
+    'blockTLength2' / Bytes(4)
+    )
 
 DNS = BitStruct(
 	 'identification' / Bytewise(Bytes(2)),
@@ -41,17 +58,6 @@ DNS = BitStruct(
 	 'total_authority' / Bytewise(Bytes(2)),
 	 'total_additional' / Bytewise(Bytes(2)),
 	)
-
-# IP level protocols
-def protocolType(protocol):
-	if protocol == 1:
-		return ICMP
-	elif protocol == 6:
-		return TCP
-	elif protocol == 11:
-		return UDP
-	else:
-		return None
 
 IP = BitStruct(
 	#word 1
@@ -82,7 +88,6 @@ Ethernet = Struct(
         'type' / Bytes(2),
         # ip = IP
         )
-ETHER_TYPE = { b'\x08\x00': IP}
-DNS = "Bloop"	
+ETHER_TYPE = { b'\x08\x00': IP}	
 IP_TYPE = {b'\x01': ICMP, b'\x06': TCP, b'\x11': UDP}
 TYPE_STR = {ICMP:"ICMP",TCP:"TCP",UDP:"UDP",DNS:"DNS", Ethernet:"Ethernet", IP:"IP"}
