@@ -97,7 +97,7 @@ def getEpBlock(data): #pass as array
     epb = {}
     epb['blockType'] = (6).to_bytes(4,byteorder='big')
     epb['blockTLength'] = (32+len(data)).to_bytes(4,byteorder='big')
-    epb['interfaceID'] = b"\x00\x00\x00\x00"
+    epb['interfaceID'] = (0).to_bytes(4, byteorder='big')
     epb['timestamp'] = int(round(time.time()*1000000)).to_bytes(8,byteorder='big')
     epb['capturedp_len'] = dataLen.to_bytes(4,byteorder='big')
     epb['origp_len'] = dataLen.to_bytes(4,byteorder='big')
