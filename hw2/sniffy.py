@@ -13,10 +13,11 @@ def sig_handler(signal, frame):
     endSniff()
 
 def endSniff(): 
-    file = open("out.pcapng","wb")
-    getSbHeader(file)
-    getIdBlock(file)
-    file.write(epString)
+    if args_dict['output'] is not None:
+        file = open(args_dict['output'],"wb")
+        getSbHeader(file)
+        getIdBlock(file)
+        file.write(epString)
     print("Exiting!")
     sys.exit(0)
 
@@ -77,13 +78,13 @@ if __name__=='__main__':
                 #printpcap("hi",packet,ip_type)
             packet = stripHeader(packet, ip_type.sizeof())
             #DNS
-            if ip_type == UDP and not args_dict['filter'] and args_dict['filter'] == UDP:
-            	data_packet = ip_type.parse(packet)
-            	printPacket(data_packet,ip_type)
+            if ip_type == UDP and (not args_dict['filter'] or args_dict['filter'] == 'DNS'):
+            	data_packet = DNS.parse(packet)
+            	printPacket(data_packet, DNS) # print DNS!
             	if transport_packet['dest_port'] == b"\x00\x35" or transport_packet['src_port'] == b"\x00\x35":
             		print("IS DNS")
-            	packet = stripHeader(packet,ip_type.sizeof())
-            if not args_dict['filter'] or args_dict['filter'] == TYPE_STR[ip_type]:
+            	packet = stripHeader(packet,DNS.sizeof())
+            if not args_dict['filter'] or args_dict['filter'] == TYPE_STR[DNS]:
                 #print("Added")
                 epString+=getEpBlock(packet)
             #if not args_dict['filter'] or args_dict['filter'] == protocol:

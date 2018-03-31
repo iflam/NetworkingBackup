@@ -55,7 +55,7 @@ def getSbHeader(f): #Length is passed as integer
     sb['byteOrderMagic'] = 0x1A2B3C4D
     sb['major'] = 1
     sb['minor'] = 0
-    sb['sec_len'] = 0
+    sb['sec_len'] = -1 
     sb['blockTLength2'] = 28
     f.write(SBH.build(sb))
 
