@@ -81,9 +81,8 @@ if __name__=='__main__':
             if ip_type == UDP and (not args_dict['filter'] or args_dict['filter'] == 'DNS'):
             	data_packet = DNS.parse(packet)
             	printPacket(data_packet, DNS) # print DNS!
-            	if transport_packet['dest_port'] == b"\x00\x35" or transport_packet['src_port'] == b"\x00\x35":
-            		print("IS DNS")
-            	packet = stripHeader(packet,DNS.sizeof())
+            	#if transport_packet['dest_port'] == b"\x00\x35" or transport_packet['src_port'] == b"\x00\x35":
+            	packet = stripHeader(packet,ip_type.sizeof())
             if not args_dict['filter'] or args_dict['filter'] == TYPE_STR[DNS]:
                 #print("Added")
                 epString+=getEpBlock(packet)

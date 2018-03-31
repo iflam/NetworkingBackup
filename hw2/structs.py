@@ -41,9 +41,9 @@ SBH = Struct(
 IDB = Struct(
     'blockType' / Bytes(4),
     'blockTLength' / Bytes(4),
-    'linkType' / Bytes(4),
+    'linkType' / Bytes(2),
     'res' / Bytes(2),
-    'snapLen' / Bytes(2),
+    'snapLen' / Bytes(4),
     'blockTLength2' / Bytes(4)
     )
 
