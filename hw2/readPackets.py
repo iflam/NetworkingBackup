@@ -9,15 +9,20 @@ def readPacket(sock):
 
 # protocol is of type Struct (i.e. something we define in structs.py)
 def printPacket(parsed_packet, protocol):
-    print(TYPE_STR[protocol])
-    printFields(parsed_packet)
+    result = TYPE_STR[protocol] + '('
+    result += printFields(parsed_packet) + ')'
+    print(result)
 
 def printFields(parsed_packet):
+    result = ''
     for key in parsed_packet.keys():
         try:
-            print(key, ':', parsed_packet[key].hex())
+            result += str(key) + '=' + str(parsed_packet[key].hex()) + ', '
+            #print(key, ':', parsed_packet[key].hex())
         except: # hacky try/except -> hex() only works on Bytes fields, so if it doesn't we're dealing with BitsIntegers
-            print(key, ':', parsed_packet[key])
+            result += str(key) + '=' + str(parsed_packet[key]) + ', '
+            #print(key, ':', parsed_packet[key])
+    return result
 
 # TODO 
 def stripEthernet(packet):
@@ -70,7 +75,7 @@ def getIdBlock(f): #blocktype, linktype passed as saved in struct
     idb['blockTLength'] = 20
     idb['linkType'] = 1
     idb['res'] = 0
-    idb['snapLen'] = 0
+    idb['snapLen'] = MAX_PACKET_LEN 
     idb['blockTLength2'] = 20
     f.write(IDB.build(idb))
 

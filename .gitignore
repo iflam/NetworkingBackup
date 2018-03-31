@@ -6,4 +6,4 @@ hw1/child
 hw1/pipe
 venv
 hw2/venv
-__pycache
+*/__pycache/

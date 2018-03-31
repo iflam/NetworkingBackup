@@ -84,7 +84,7 @@ if __name__=='__main__':
             		print("IS DNS")
             	packet = stripHeader(packet,ip_type.sizeof())
             if not args_dict['filter'] or args_dict['filter'] == TYPE_STR[ip_type]:
-                print("Added")
+                #print("Added")
                 epString+=getEpBlock(packet)
             #if not args_dict['filter'] or args_dict['filter'] == protocol:
             #    printPacket(packet, protocol)
