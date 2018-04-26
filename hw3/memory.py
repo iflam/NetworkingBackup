@@ -7,6 +7,7 @@ from collections import defaultdict
 from errno import ENOENT
 from stat import S_IFDIR, S_IFLNK, S_IFREG
 from time import time
+import os
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
@@ -39,6 +40,7 @@ class Memory(LoggingMixIn, Operations):
         self.files[path]['st_gid'] = gid
 
     def create(self, path, mode):
+        print("hoopla!")
         self.files[path] = dict(
             st_mode=(S_IFREG | mode),
             st_nlink=1,
@@ -80,13 +82,16 @@ class Memory(LoggingMixIn, Operations):
         self.files['/']['st_nlink'] += 1
 
     def open(self, path, flags):
+        #We will need this one
         self.fd += 1
         return self.fd
 
     def read(self, path, size, offset, fh):
+        #We will need this one
         return self.data[path][offset:offset + size]
 
     def readdir(self, path, fh):
+        #This is where LS happens
         return ['.', '..'] + [x[1:] for x in self.files if x != '/']
 
     def readlink(self, path):
@@ -101,6 +106,7 @@ class Memory(LoggingMixIn, Operations):
             pass        # Should return ENOATTR
 
     def rename(self, old, new):
+        #DUH
         self.data[new] = self.data.pop(old)
         self.files[new] = self.files.pop(old)
 
@@ -142,6 +148,7 @@ class Memory(LoggingMixIn, Operations):
         self.files[path]['st_mtime'] = mtime
 
     def write(self, path, data, offset, fh):
+        #THIS IS WHERE WRITE HAPPENS
         self.data[path] = (
             # make sure the data gets inserted at the right offset
             self.data[path][:offset].ljust(offset, '\x00'.encode('ascii'))
@@ -157,6 +164,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('mount')
     args = parser.parse_args()
-
     logging.basicConfig(level=logging.DEBUG)
-    fuse = FUSE(Memory(), args.mount, foreground=True, allow_other=True)
+    if not os.path.exists(args.mount):
+        os.makedirs(args.mount)
+    fuse = FUSE(Memory(), args.mount, foreground=True)
