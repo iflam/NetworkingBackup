@@ -45,8 +45,6 @@ class Memory(LoggingMixIn, Operations):
         self.files[path]['st_gid'] = gid
 
     def create(self, path, mode):
-        print("hoopla!")
-        self.sock.send(b'hello')
         self.files[path] = dict(
             st_mode=(S_IFREG | mode),
             st_nlink=1,
@@ -54,12 +52,18 @@ class Memory(LoggingMixIn, Operations):
             st_ctime=time(),
             st_mtime=time(),
             st_atime=time())
-
+        packet = packets.new_packet(OP_CREATE)
+        packet['path'] = path
+        print('PACKET CONTENTS', packet)
+        self.sock.send(packets.build(packet)) # send new file to bootstrap
+        # should we wait for ack here?
         self.fd += 1
         return self.fd
 
     def getattr(self, path, fh=None):
         if path not in self.files:
+            #packet = packets.new_packet(OP_FWD)
+            #packet['fwd'] = 'getattr'
             raise FuseOSError(ENOENT)
 
         return self.files[path]
@@ -104,7 +108,7 @@ class Memory(LoggingMixIn, Operations):
         ls = packets.unpack(self.sock.recv(MAX_READ))
         print('CONN RECV CONTENTS', ls)
         print('LS CONTENTS', ls['ls'])
-        return ['.', '..'] + ls['ls']
+        return ['.', '..'] + [x[1:] for x in ls['ls']]
 
     def readlink(self, path):
         return self.data[path]

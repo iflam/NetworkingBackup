@@ -11,7 +11,7 @@ import sys
 
 # globals
 nodes = [] 
-files = ['dummy']
+files = []
 args = None
 
 sel = selectors.DefaultSelector() # need to select between accept, recv, and input
@@ -31,12 +31,14 @@ def invalid():
     print("invalid command")
 
 def recv(conn):
-    packet = json.loads(conn.recv(MAX_READ).decode())
+    packet = packets.unpack(conn.recv(MAX_READ))
     print(packet)
     if packet['opcode'] == OP_LS:
         reply = packets.new_packet(OP_LS_R)
         reply['ls'] = files
         conn.send(packets.build(reply))
+    elif packet['opcode'] == OP_CREATE:
+        files.append(packet['path'])
     else:
         print('Invalid opcode')
 
