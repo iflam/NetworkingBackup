@@ -11,6 +11,10 @@ import os
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
+from consts import *
+from opcodes import *
+import packets
+
 if not hasattr(__builtins__, 'bytes'):
     bytes = str
 
@@ -94,7 +98,13 @@ class Memory(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         #This is where LS happens
-        return ['.', '..'] + [x[1:] for x in self.files if x != '/']
+        #return ['.', '..'] + [x[1:] for x in self.files if x != '/']
+        packet = packets.new_packet(OP_LS)
+        self.sock.send(packets.build(packet))
+        ls = packets.unpack(self.sock.recv(MAX_READ))
+        print('CONN RECV CONTENTS', ls)
+        print('LS CONTENTS', ls['ls'])
+        return ['.', '..'] + ls['ls']
 
     def readlink(self, path):
         return self.data[path]

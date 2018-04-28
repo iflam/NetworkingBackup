@@ -14,6 +14,7 @@ from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from cmd import *
 from consts import *
 from opcodes import *
+import packets
 
 import argparse
 import json
@@ -46,13 +47,8 @@ def join():
     global bootstrap_sock
     bootstrap_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     bootstrap_sock.connect((bootstrap_ip, args.port))
-    packet = new_packet(JOIN)
-    bootstrap_sock.send(build(packet))
-
-def new_packet(opcode):
-    return {'opcode': opcode}
-def build(packet):
-    return json.dumps(packet).encode()
+    packet = packets.new_packet(OP_JOIN)
+    bootstrap_sock.send(packets.build(packet))
 
 def prompt():
     print("DiFUSE Client> ", end='', flush=True)

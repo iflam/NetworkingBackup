@@ -1,4 +1,6 @@
-JOIN = 'join'
-BYE = 'bye'
+OP_JOIN = 'join'
+OP_BYE = 'bye'
 
-CREATE = 'create'
+OP_CREATE = 'create'
+OP_LS = 'ls'
+OP_LS_R = 'ls_R'

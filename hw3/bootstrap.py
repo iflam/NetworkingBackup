@@ -1,5 +1,7 @@
 from cmd import *
 from consts import *
+from opcodes import *
+import packets
 
 import argparse
 import json
@@ -9,6 +11,7 @@ import sys
 
 # globals
 nodes = [] 
+files = ['dummy']
 args = None
 
 sel = selectors.DefaultSelector() # need to select between accept, recv, and input
@@ -28,7 +31,14 @@ def invalid():
     print("invalid command")
 
 def recv(conn):
-    print(conn.recv(MAX_READ))
+    packet = json.loads(conn.recv(MAX_READ).decode())
+    print(packet)
+    if packet['opcode'] == OP_LS:
+        reply = packets.new_packet(OP_LS_R)
+        reply['ls'] = files
+        conn.send(packets.build(reply))
+    else:
+        print('Invalid opcode')
 
 def accept(sock):
     conn, addr = sock.accept()
