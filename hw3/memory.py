@@ -92,9 +92,9 @@ class Memory(LoggingMixIn, Operations):
             tcp_sock.send(packets.build(packet)) # send syscall 
             reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
             print('Received SYSCALL_R', reply)
-            #if reply['getattr']:
-            #    return reply['getattr']
-            raise FuseOSError(ENOENT)
+            if reply['getattr']:
+                return reply['getattr']
+            #raise FuseOSError(ENOENT)
         return self.files[path]
 
     def getxattr(self, path, name, position=0):

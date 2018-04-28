@@ -31,6 +31,7 @@ bootstrap_sock = None
 listen_sock = None
 tier = "basic"
 mount = "mnt"
+filesystem = None
 args = None
 
 def intro():
@@ -79,14 +80,28 @@ def accept(sock):
     print('accepted connection')
     sel.register(conn, selectors.EVENT_READ, read)
 
+def close(sock):
+    sel.unregister(sock)
+    sock.close()
+
 def read(sock):
     print("reading from socket")
     packet = packets.unpack(sock.recv(MAX_READ))
     print(packet)
+    if not packet:
+        print('Read empty packet, closing connection', sock)
+        close(sock)
+        return
     if packet['opcode'] == OP_SYSCALL:
         # TODO: do syscall
         print('Received OP_SYSCALL')
-        reply = packets.new_packet(OP_REPLY)
+        reply = packets.new_packet(OP_SYSCALL_R)
+        print('syscall', packet['syscall'])
+        if packet['syscall'] == 'getattr': 
+            reply['getattr'] = filesystem.getattr(packet['path'])
+        else:
+            print('Invalid syscall')
+        print('Sending OP_SYSCALL_R', reply)
         sock.send(packets.build(reply))
     else:
         print('Invalid opcode')
@@ -102,7 +117,9 @@ def do_cmd(stdin):
                 print(val)
 
 def fuse_thread():
-    fuse = FUSE(Memory((bootstrap_ip, args.port), listen_sock.getsockname()), args.mount, foreground=True)
+    global filesystem
+    filesystem = Memory((bootstrap_ip, args.port), listen_sock.getsockname())
+    fuse = FUSE(filesystem, args.mount, foreground=True)
 
 if __name__ == "__main__":
     setup_args()

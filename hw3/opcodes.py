@@ -4,6 +4,7 @@ OP_FIND = 'find'
 OP_FIND_R = 'find_R'
 
 OP_SYSCALL = 'syscall'
+OP_SYSCALL_R = 'syscall_R'
 OP_CREATE = 'create'
 OP_LS = 'ls'
 OP_LS_R = 'ls_R'
