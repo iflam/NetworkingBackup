@@ -85,16 +85,15 @@ class Memory(LoggingMixIn, Operations):
             loc = tuple(reply['loc'])
             tcp_sock = socks.tcp_sock() 
             tcp_sock.connect(loc) # connect to other node
-            packet = packets.new_packet(OP_SYSCALL)
-            packet['syscall'] = 'getattr'
+            packet = packets.new_packet(OP_GETATTR)
             packet['path'] = path
-            print('Sending SYSCALL', packet)
+            print('Sending OP_GETATTR', packet)
             tcp_sock.send(packets.build(packet)) # send syscall 
             reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
-            print('Received SYSCALL_R', reply)
+            print('Received OP_GETATTR_R', reply)
             if reply['getattr']:
                 return reply['getattr']
-            #raise FuseOSError(ENOENT)
+            else: raise FuseOSError(ENOENT)
         return self.files[path]
 
     def getxattr(self, path, name, position=0):

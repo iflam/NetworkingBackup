@@ -78,30 +78,25 @@ def invalid():
 def accept(sock):
     conn, addr = sock.accept()
     print('accepted connection')
-    sel.register(conn, selectors.EVENT_READ, read)
+    sel.register(conn, selectors.EVENT_READ, recv)
 
 def close(sock):
     sel.unregister(sock)
     sock.close()
 
-def read(sock):
-    print("reading from socket")
+def recv(sock):
+    print("receiving from socket")
     packet = packets.unpack(sock.recv(MAX_READ))
     print(packet)
     if not packet:
         print('Read empty packet, closing connection', sock)
         close(sock)
         return
-    if packet['opcode'] == OP_SYSCALL:
-        # TODO: do syscall
-        print('Received OP_SYSCALL')
-        reply = packets.new_packet(OP_SYSCALL_R)
-        print('syscall', packet['syscall'])
-        if packet['syscall'] == 'getattr': 
-            reply['getattr'] = filesystem.getattr(packet['path'])
-        else:
-            print('Invalid syscall')
-        print('Sending OP_SYSCALL_R', reply)
+    if packet['opcode'] == OP_GETATTR:
+        print('Received OP_GETATTR')
+        reply = packets.new_packet(OP_GETATTR_R)
+        reply['getattr'] = filesystem.getattr(packet['path']) # call getattr locally
+        print('Sending OP_GETATTR_R', reply)
         sock.send(packets.build(reply))
     else:
         print('Invalid opcode')
@@ -132,7 +127,6 @@ if __name__ == "__main__":
     if not os.path.exists(args.mount):
         os.makedirs(args.mount)
     sel = selectors.DefaultSelector()
-    #sel.register(bootstrap_sock, selectors.EVENT_READ, read)
     sel.register(sys.stdin, selectors.EVENT_READ, do_cmd)
     sel.register(listen_sock, selectors.EVENT_READ, accept)
     while True:
