@@ -15,16 +15,20 @@ from cmd import *
 from consts import *
 from opcodes import *
 import packets
+import socks
 
 import argparse
 import json
 import selectors
+import signal
 import socket
 import sys
+import threading
 from memory import Memory
 
 bootstrap_ip = "127.0.0.1" 
 bootstrap_sock = None
+listen_sock = None
 tier = "basic"
 mount = "mnt"
 args = None
@@ -43,12 +47,21 @@ def setup_args():
     parser.add_argument("-t", "--tier", choices=["basic", "hash", "repl"], help="DiFUSE hw tier")
     args = parser.parse_args()
 
+# join the network
+# global listen_sock is where this node will accept connections from other nodes (incl. bootstrap)
+# temp_sock used to send bootstrap join request with addr of listen_sock, then closed
 def join():
-    global bootstrap_sock
-    bootstrap_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    bootstrap_sock.connect((bootstrap_ip, args.port))
-    packet = packets.new_packet(OP_JOIN)
-    bootstrap_sock.send(packets.build(packet))
+    global listen_sock
+    listen_sock = socks.listen_sock() 
+    listen_sock.setblocking(False)
+    temp_sock = socks.tcp_sock() # only a temp sock is required to join network
+    temp_sock.connect((bootstrap_ip, args.port))
+    print('connected to bootstrap', temp_sock)
+    packet = packets.join_packet(listen_sock.getsockname())
+    print('Sending join request', packet)
+    temp_sock.send(packets.build(packet))
+    #TODO: recv ack?
+    temp_sock.close()
 
 def prompt():
     print("DiFUSE Client> ", end='', flush=True)
@@ -61,11 +74,22 @@ def help_menu():
 def invalid():
     print("invalid command")
 
+def accept(sock):
+    conn, addr = sock.accept()
+    print('accepted connection')
+    sel.register(conn, selectors.EVENT_READ, read)
+
 def read(sock):
     print("reading from socket")
-    print(bootstrap_sock.recv(MAX_READ))
-    # TODO: read packet sent by bootstrap
-    pass 
+    packet = packets.unpack(sock.recv(MAX_READ))
+    print(packet)
+    if packet['opcode'] == OP_SYSCALL:
+        # TODO: do syscall
+        print('Received OP_SYSCALL')
+        reply = packets.new_packet(OP_REPLY)
+        sock.send(packets.build(reply))
+    else:
+        print('Invalid opcode')
 
 def do_cmd(stdin): 
     cmd = stdin.readline().strip()  
@@ -77,19 +101,23 @@ def do_cmd(stdin):
             if cmd == var:
                 print(val)
 
+def fuse_thread():
+    fuse = FUSE(Memory((bootstrap_ip, args.port), listen_sock.getsockname()), args.mount, foreground=True)
+
 if __name__ == "__main__":
     setup_args()
     print(args)
     intro()
     join()
     print("Starting FUSE...")
-    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
+    threading.Thread(target=fuse_thread, name='fuse_thread').start()
     if not os.path.exists(args.mount):
         os.makedirs(args.mount)
-    fuse = FUSE(Memory(bootstrap_sock), args.mount, foreground=True)
     sel = selectors.DefaultSelector()
     #sel.register(bootstrap_sock, selectors.EVENT_READ, read)
     sel.register(sys.stdin, selectors.EVENT_READ, do_cmd)
+    sel.register(listen_sock, selectors.EVENT_READ, accept)
     while True:
             prompt()
             events = sel.select()

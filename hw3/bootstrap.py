@@ -11,7 +11,7 @@ import sys
 
 # globals
 nodes = [] 
-files = []
+files = {} # dict mapping files to nodes 
 args = None
 
 sel = selectors.DefaultSelector() # need to select between accept, recv, and input
@@ -30,24 +30,46 @@ def help_menu():
 def invalid():
     print("invalid command")
 
+# close a socket and unregister from select
+# don't remove from nodes list, bc node may still be in network, just not currently talking to bootstrap
+def close(conn):
+    conn.close()
+    sel.unregister(conn)
+
 def recv(conn):
+    print('Receiving from', conn)
     packet = packets.unpack(conn.recv(MAX_READ))
-    print(packet)
-    if packet['opcode'] == OP_LS:
+    print('Received', packet)
+    if not packet:
+        print('Empty packet, closing connection to', conn)
+        close(conn)
+        return
+    if 'opcode' not in packet:
+        print('Invalid packet: opcode missing')
+    if packet['opcode'] == OP_JOIN:
+        nodes.append(packet['loc'])
+    elif packet['opcode'] == OP_LS:
+        print('Received OP_LS')
         reply = packets.new_packet(OP_LS_R)
-        reply['ls'] = files
+        reply['ls'] = list(files.keys())
         conn.send(packets.build(reply))
     elif packet['opcode'] == OP_CREATE:
-        files.append(packet['path'])
+        print('Creating file')
+        files[packet['path']] = packet['loc'] # map new file to node
+    elif packet['opcode'] == OP_FIND: 
+        print('Received OP_FIND', packet)
+        reply = packets.new_packet(OP_FIND_R)
+        if packet['path'] in files:
+            reply['loc'] = files[packet['path']] 
+        # TODO: error file not found
+        print('Sending OP_FIND_R', reply)
+        conn.send(packets.build(reply))
     else:
         print('Invalid opcode')
 
 def accept(sock):
     conn, addr = sock.accept()
-    print("accepted connection, receiving...")
-    packet = json.loads(conn.recv(MAX_READ).decode())
-    print(packet)
-    nodes.append(addr)
+    print('accepted connection', conn)
     sel.register(conn, selectors.EVENT_READ, recv) 
 
 def do_cmd(stdin): 

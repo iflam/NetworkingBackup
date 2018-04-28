@@ -14,6 +14,9 @@ from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from consts import *
 from opcodes import *
 import packets
+import socks
+
+import socket
 
 if not hasattr(__builtins__, 'bytes'):
     bytes = str
@@ -22,8 +25,9 @@ if not hasattr(__builtins__, 'bytes'):
 class Memory(LoggingMixIn, Operations):
     'Example memory filesystem. Supports only one level of files.'
 
-    def __init__(self, sock=None):
-        self.sock = sock # socket from node->bootstrap
+    def __init__(self, bootstrap=None, node=None):
+        self.bootstrap = bootstrap
+        self.node = node
         self.files = {}
         self.data = defaultdict(bytes)
         self.fd = 0
@@ -54,18 +58,43 @@ class Memory(LoggingMixIn, Operations):
             st_atime=time())
         packet = packets.new_packet(OP_CREATE)
         packet['path'] = path
-        print('PACKET CONTENTS', packet)
-        self.sock.send(packets.build(packet)) # send new file to bootstrap
+        packet['loc'] = self.node
+        sock = socks.tcp_sock()
+        sock.connect(self.bootstrap)
+        print('Connected to bootstrap', sock)
+        print('Sending packet', packet)
+        print('Built packet', packets.build(packet))
+        sock.send(packets.build(packet)) # send new file to bootstrap
+        sock.close()
         # should we wait for ack here?
         self.fd += 1
         return self.fd
 
     def getattr(self, path, fh=None):
         if path not in self.files:
-            #packet = packets.new_packet(OP_FWD)
-            #packet['fwd'] = 'getattr'
+            packet = packets.new_packet(OP_FIND) # ask bootstrap - find location of file
+            packet['path'] = path
+            print('Sending OP_FIND', packet)
+            sock = socks.tcp_sock()
+            sock.connect(self.bootstrap)
+            sock.send(packets.build(packet))
+            reply = packets.unpack(sock.recv(MAX_READ))
+            print('Received OP_FIND_R', reply)
+            if 'loc' not in reply:
+                raise FuseOSError(ENOENT)
+            loc = tuple(reply['loc'])
+            tcp_sock = socks.tcp_sock() 
+            tcp_sock.connect(loc) # connect to other node
+            packet = packets.new_packet(OP_SYSCALL)
+            packet['syscall'] = 'getattr'
+            packet['path'] = path
+            print('Sending SYSCALL', packet)
+            tcp_sock.send(packets.build(packet)) # send syscall 
+            reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
+            print('Received SYSCALL_R', reply)
+            #if reply['getattr']:
+            #    return reply['getattr']
             raise FuseOSError(ENOENT)
-
         return self.files[path]
 
     def getxattr(self, path, name, position=0):
@@ -104,10 +133,11 @@ class Memory(LoggingMixIn, Operations):
         #This is where LS happens
         #return ['.', '..'] + [x[1:] for x in self.files if x != '/']
         packet = packets.new_packet(OP_LS)
-        self.sock.send(packets.build(packet))
-        ls = packets.unpack(self.sock.recv(MAX_READ))
-        print('CONN RECV CONTENTS', ls)
-        print('LS CONTENTS', ls['ls'])
+        sock = socks.tcp_sock()
+        sock.connect(self.bootstrap)
+        sock.send(packets.build(packet))
+        ls = packets.unpack(sock.recv(MAX_READ))
+        print('ls contents', ls['ls'])
         return ['.', '..'] + [x[1:] for x in ls['ls']]
 
     def readlink(self, path):
