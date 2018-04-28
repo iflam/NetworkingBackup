@@ -18,7 +18,8 @@ if not hasattr(__builtins__, 'bytes'):
 class Memory(LoggingMixIn, Operations):
     'Example memory filesystem. Supports only one level of files.'
 
-    def __init__(self):
+    def __init__(self, sock=None):
+        self.sock = sock # socket from node->bootstrap
         self.files = {}
         self.data = defaultdict(bytes)
         self.fd = 0
@@ -41,6 +42,7 @@ class Memory(LoggingMixIn, Operations):
 
     def create(self, path, mode):
         print("hoopla!")
+        self.sock.send(b'hello')
         self.files[path] = dict(
             st_mode=(S_IFREG | mode),
             st_nlink=1,
