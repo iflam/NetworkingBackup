@@ -10,7 +10,7 @@ The basic idea is no one maintains a permanent connection with anyone. Temporary
 	# do something
 	sock.close() 
 )
-Of course, these temporary sockets need some_addr to connect to. Therefore, every node and the bootstrap are constantly listening for connections. node.py and bootstrap.py each have their own accept() function, in which they register select to receive packets from a new connection. Packets are received in the recv() function. This is where packets are unpacked and a specific action is taken according to their opcode
+Of course, these temporary sockets need some_addr to connect to. Therefore, every node and the bootstrap are constantly listening for connections. node.py and bootstrap.py each have their own accept() function, in which they register select to receive packets from a new connection. Packets are then received in the recv() function. This is where packets are unpacked and a specific action is taken according to their opcode
 (something like:
 	def recv(sock):
 		packets.unpack(sock.recv(MAX_READ))
