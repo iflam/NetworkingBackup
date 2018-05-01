@@ -4,6 +4,7 @@ import json
 
 def new_packet(opcode):
     return {'opcode': opcode}
+    
 def build(packet):
     packet = json.dumps(packet).encode()
     #if 'loc' in packet: packet['loc'] = tuple(packet['loc'])
@@ -15,5 +16,10 @@ def unpack(packet):
 
 def join_packet(loc):
     packet = new_packet(OP_JOIN)
+    packet['loc'] = loc
+    return packet
+
+def leave_packet(loc):
+    packet = new_packet(OP_BYE)
     packet['loc'] = loc
     return packet

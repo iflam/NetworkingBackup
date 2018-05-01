@@ -46,16 +46,20 @@ def recv(conn):
         return
     if 'opcode' not in packet:
         print('Invalid packet: opcode missing')
+
     if packet['opcode'] == OP_JOIN:
         nodes.append(packet['loc'])
+
     elif packet['opcode'] == OP_LS:
         print('Received OP_LS')
         reply = packets.new_packet(OP_LS_R)
         reply['ls'] = list(files.keys())
         conn.send(packets.build(reply))
+
     elif packet['opcode'] == OP_CREATE:
         print('Creating file')
         files[packet['path']] = packet['loc'] # map new file to node
+
     elif packet['opcode'] == OP_FIND: 
         print('Received OP_FIND', packet)
         reply = packets.new_packet(OP_FIND_R)
@@ -64,6 +68,23 @@ def recv(conn):
         # TODO: error file not found
         print('Sending OP_FIND_R', reply)
         conn.send(packets.build(reply))
+
+    elif packet['opcode'] == OP_BYE:
+        print('Received OP_LEAVE', packet)
+        print('nodes are: ', nodes)
+        if packet['loc'] in nodes:
+            nodes.remove(packet['loc'])
+        temp = {x:y for x,y in files.items()}
+        for f in temp:
+            print(packet['loc'])
+            print(temp[f])
+            if temp[f] == packet['loc']:
+                del files[f]
+        reply = packets.new_packet(OP_BYE_R)
+        print('Sending OP_LEAVE_R', reply)
+        print('Sending to: ',conn)
+        conn.send(packets.build(reply))
+
     else:
         print('Invalid opcode')
 

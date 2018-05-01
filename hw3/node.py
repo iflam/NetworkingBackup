@@ -33,7 +33,9 @@ tier = "basic"
 mount = "mnt"
 filesystem = None
 args = None
-
+t = None
+fuse = None
+sel = selectors.DefaultSelector()
 def intro():
     print("***DiFUSE Client***")
     print("Connected to bootstrap " + bootstrap_ip + " port " + str(args.port))
@@ -64,6 +66,17 @@ def join():
     #TODO: recv ack?
     temp_sock.close()
 
+def leave():
+    global listen_sock
+    temp_sock = socks.tcp_sock()
+    temp_sock.connect((bootstrap_ip,args.port))
+    print('connected to bootstrap for exit', temp_sock)
+    packet = packets.leave_packet(listen_sock.getsockname())
+    print('sending leave notice', packet)
+    temp_sock.send(packets.build(packet))
+    #TODO: recv ack?
+    temp_sock.close()
+
 def prompt():
     print("DiFUSE Client> ", end='', flush=True)
 
@@ -77,26 +90,46 @@ def invalid():
 
 def accept(sock):
     conn, addr = sock.accept()
-    print('accepted connection')
+    print('accepted connection', conn)
     sel.register(conn, selectors.EVENT_READ, recv)
 
-def close(sock):
+
+def close(sock): 
     sel.unregister(sock)
     sock.close()
 
 def recv(sock):
     print("receiving from socket")
     packet = packets.unpack(sock.recv(MAX_READ))
-    print(packet)
+    print("packet is: ", packet)
     if not packet:
         print('Read empty packet, closing connection', sock)
         close(sock)
         return
     if packet['opcode'] == OP_GETATTR:
-        print('Received OP_GETATTR')
+        print('Received OP_GETATTR in node.py')
         reply = packets.new_packet(OP_GETATTR_R)
         reply['getattr'] = filesystem.getattr(packet['path']) # call getattr locally
         print('Sending OP_GETATTR_R', reply)
+        sock.send(packets.build(reply))
+
+    elif packet['opcode'] == OP_BYE_R:
+        close(sock)
+        os.kill(os.getpid(),signal.SIGKILL)
+        sys.exit(0)
+ 
+    elif packet['opcode'] == OP_READ:
+        print("Received OP_READ in node.py")
+        reply = packets.new_packet(OP_READ_R)
+        reply['read'] = filesystem.read(packet['path'],packet['size'],packet['offset'],packet['fh'])
+        print('Sending OP_READ_R with ', reply['read'])
+        sock.send(packets.build(reply))
+
+    elif packet['opcode'] == OP_WRITE:
+        print("Received OP_WRITE in node.py")
+        reply = packets.new_packet(OP_WRITE_R)
+        reply['datalen'] = filesystem.write(packet['path'],packet['data'],packet['offset'],packet['fh'])
+        print('Sending OP_WRITE_R with ', reply['datalen'])
         sock.send(packets.build(reply))
     else:
         print('Invalid opcode')
@@ -116,17 +149,28 @@ def fuse_thread():
     filesystem = Memory((bootstrap_ip, args.port), listen_sock.getsockname())
     fuse = FUSE(filesystem, args.mount, foreground=True)
 
+def sigint_handler(signal2,frame):
+    print("SIGINT~~~~~~~~~~~~~~")
+    leave()
+    print("got back to here")
+    #LEAVE HERE???
+    os.kill(os.getpid(),signal.SIGKILL)
+    sys.exit(0)
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT,sigint_handler)
     setup_args()
     print(args)
     intro()
     join()
     print("Starting FUSE...")
     #logging.basicConfig(level=logging.DEBUG)
-    threading.Thread(target=fuse_thread, name='fuse_thread').start()
+    print(os.path.exists(args.mount))
     if not os.path.exists(args.mount):
         os.makedirs(args.mount)
-    sel = selectors.DefaultSelector()
+    t = threading.Thread(target=fuse_thread, name='fuse_thread')
+    t.setDaemon(True)
+    t.start()
     sel.register(sys.stdin, selectors.EVENT_READ, do_cmd)
     sel.register(listen_sock, selectors.EVENT_READ, accept)
     while True:
