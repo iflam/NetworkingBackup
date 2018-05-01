@@ -61,6 +61,7 @@ class Memory(LoggingMixIn, Operations):
             st_ctime=time(),
             st_mtime=time(),
             st_atime=time())
+        self.data[path] = ""
         packet = packets.new_packet(OP_CREATE)
         packet['path'] = path
         packet['loc'] = self.node
@@ -83,12 +84,12 @@ class Memory(LoggingMixIn, Operations):
         if path not in self.files:
             packet = packets.new_packet(OP_FIND) # ask bootstrap - find location of file
             packet['path'] = path
-            print('Sending OP_FIND', packet)
+            print('Sending OP_FIND for getattr', packet)
             sock = socks.tcp_sock()
             sock.connect(self.bootstrap)
             sock.send(packets.build(packet))
             reply = packets.unpack(sock.recv(MAX_READ))
-            print('Received OP_FIND_R', reply)
+            print('Received OP_FIND_Rfor getattr', reply)
             if 'loc' not in reply:
                 raise FuseOSError(ENOENT)
             loc = tuple(reply['loc'])
@@ -159,7 +160,7 @@ class Memory(LoggingMixIn, Operations):
             reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
             print('Received OP_READ_R', reply)
             if 'read' in reply:
-                return reply['read']
+                return reply['read'].encode('utf-8')
             else: raise FuseOSError(ENOENT)
         print("offset: ", offset)
         print("size: ", size)
@@ -194,9 +195,41 @@ class Memory(LoggingMixIn, Operations):
             pass        # Should return ENOATTR
 
     def rename(self, old, new):
-        #DUH
-        self.data[new] = self.data.pop(old)
-        self.files[new] = self.files.pop(old)
+        print("In Rename")
+        brename = packets.new_packet(OP_RENAME)
+        brename['old'] = old
+        brename['new'] = new
+        if old not in self.files:
+            packet = packets.new_packet(OP_FIND) # ask bootstrap - find location of file
+            packet['path'] = old
+            print('Sending OP_FIND for RENAME', packet)
+            sock = socks.tcp_sock()
+            sock.connect(self.bootstrap)
+            sock.send(packets.build(packet))
+            reply = packets.unpack(sock.recv(MAX_READ))
+            print('Received OP_FIND_R for RENAME', reply)
+            if 'loc' not in reply:
+                raise FuseOSError(ENOENT)
+            loc = tuple(reply['loc'])
+            tcp_sock = socks.tcp_sock() 
+            tcp_sock.connect(loc) # connect to other node
+            packet = packets.new_packet(OP_RENAME)
+            packet['old'] = old
+            packet['new'] = new
+            print('Sending OP_RENAME', packet)
+            tcp_sock.send(packets.build(packet)) # send syscall 
+            reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
+            print('Received OP_RENAME_R', reply)
+            boot_sock = socks.tcp_sock()
+            boot_sock.connect(self.bootstrap)
+            boot_sock.send(packets.build(brename))
+        else:
+            self.data[new] = self.data[old]
+            del self.data[old]
+            self.files[new] = self.files.pop(old)
+            boot_sock = socks.tcp_sock()
+            boot_sock.connect(self.bootstrap)
+            boot_sock.send(packets.build(brename))
 
     def rmdir(self, path):
         # with multiple level support, need to raise ENOTEMPTY if contains any files

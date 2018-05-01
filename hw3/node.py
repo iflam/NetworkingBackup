@@ -121,7 +121,7 @@ def recv(sock):
     elif packet['opcode'] == OP_READ:
         print("Received OP_READ in node.py")
         reply = packets.new_packet(OP_READ_R)
-        reply['read'] = filesystem.read(packet['path'],packet['size'],packet['offset'],packet['fh'])
+        reply['read'] = filesystem.read(packet['path'],packet['size'],packet['offset'],packet['fh']).decode()
         print('Sending OP_READ_R with ', reply['read'])
         sock.send(packets.build(reply))
 
@@ -131,6 +131,19 @@ def recv(sock):
         reply['datalen'] = filesystem.write(packet['path'],packet['data'],packet['offset'],packet['fh'])
         print('Sending OP_WRITE_R with ', reply['datalen'])
         sock.send(packets.build(reply))
+
+    elif packet['opcode'] == OP_LEAVE:
+        print("Bootstrap has exited, so we will exit too.")
+        os.kill(os.getpid(),signal.SIGKILL)
+        sys.exit(0)
+
+    elif packet['opcode'] == OP_RENAME:
+        print("Received OP_RENAME in node.py")
+        reply = packets.new_packet(OP_RENAME_R)
+        reply['rename'] = filesystem.rename(packet['old'],packet['new'])
+        print("Sending OP_RENAME in node.py")
+        sock.send(packets.build(reply))
+
     else:
         print('Invalid opcode')
 

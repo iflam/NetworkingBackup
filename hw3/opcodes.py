@@ -14,3 +14,7 @@ OP_READ = 'read'
 OP_READ_R = 'read_R'
 OP_WRITE = 'write'
 OP_WRITE_R = 'write_R'
+
+OP_LEAVE = 'leave'
+OP_RENAME = 'rename'
+OP_RENAME_R = 'rename_R'

@@ -2,12 +2,14 @@ from cmd import *
 from consts import *
 from opcodes import *
 import packets
+import socks
 
 import argparse
 import json
 import selectors
 import socket
 import sys
+import signal
 
 # globals
 nodes = [] 
@@ -69,6 +71,13 @@ def recv(conn):
         print('Sending OP_FIND_R', reply)
         conn.send(packets.build(reply))
 
+    elif packet['opcode'] == OP_RENAME:
+        print('Received OP_RENAME', packet)
+        print('files',files)
+        files[packet['new']] = files[packet['old']]
+        del files[packet['old']]
+        print('Renamed file')
+
     elif packet['opcode'] == OP_BYE:
         print('Received OP_LEAVE', packet)
         print('nodes are: ', nodes)
@@ -112,10 +121,22 @@ def setup_args():
     args = parser.parse_args()
     print(args)
 
+def sigint_handler(signal,frame):
+    for n in nodes:
+        print(tuple(n))
+        tcp_sock = socks.tcp_sock() 
+        tcp_sock.connect(tuple(n))
+        msg = packets.new_packet(OP_LEAVE)
+        tcp_sock.send(packets.build(msg))
+        tcp_sock.close()
+    print("Goodbye~!")
+    sys.exit(0)
+
 
 if __name__ == "__main__":
     setup_args()
     intro()
+    signal.signal(signal.SIGINT,sigint_handler)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((args.ip, args.port))
     sock.listen(1) # listen for nodes
