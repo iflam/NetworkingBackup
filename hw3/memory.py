@@ -169,7 +169,7 @@ class Memory(LoggingMixIn, Operations):
         end = datalen
         if datalen > size:
             end = size
-        return self.data[path][offset:offset + end]
+        return self.data[path][offset:offset + end].encode('utf-8')
 
     def readdir(self, path, fh):
         #This is where LS happens
