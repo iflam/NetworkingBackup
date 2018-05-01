@@ -18,3 +18,6 @@ OP_WRITE_R = 'write_R'
 OP_LEAVE = 'leave'
 OP_RENAME = 'rename'
 OP_RENAME_R = 'rename_R'
+
+OP_DELETE = 'delete'
+OP_DELETE_R = 'delete_R'

@@ -220,9 +220,6 @@ class Memory(LoggingMixIn, Operations):
             tcp_sock.send(packets.build(packet)) # send syscall 
             reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
             print('Received OP_RENAME_R', reply)
-            boot_sock = socks.tcp_sock()
-            boot_sock.connect(self.bootstrap)
-            boot_sock.send(packets.build(brename))
         else:
             self.data[new] = self.data[old]
             del self.data[old]
@@ -259,8 +256,37 @@ class Memory(LoggingMixIn, Operations):
         self.files[path]['st_size'] = length
 
     def unlink(self, path):
-        self.data.pop(path)
-        self.files.pop(path)
+        print("In Unlink")
+        brename = packets.new_packet(OP_DELETE)
+        brename['path'] = path
+        if path not in self.files:
+            print("In other location")
+            packet = packets.new_packet(OP_FIND) # ask bootstrap - find location of file
+            packet['path'] = path
+            print('Sending OP_FIND for DELETE', packet)
+            sock = socks.tcp_sock()
+            sock.connect(self.bootstrap)
+            sock.send(packets.build(packet))
+            reply = packets.unpack(sock.recv(MAX_READ))
+            print('Received OP_FIND_R for DELETE', reply)
+            if 'loc' not in reply:
+                raise FuseOSError(ENOENT)
+            loc = tuple(reply['loc'])
+            tcp_sock = socks.tcp_sock() 
+            tcp_sock.connect(loc) # connect to other node
+            packet = packets.new_packet(OP_DELETE)
+            packet['path'] = path
+            print('Sending OP_DELETE', packet)
+            tcp_sock.send(packets.build(packet)) # send syscall 
+            reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
+            print('Received OP_DELETE_R', reply)
+        else:
+            print("In self")
+            del self.data[path]
+            self.files.pop(path)
+            boot_sock = socks.tcp_sock()
+            boot_sock.connect(self.bootstrap)
+            boot_sock.send(packets.build(brename))
 
     def utimens(self, path, times=None):
         now = time()

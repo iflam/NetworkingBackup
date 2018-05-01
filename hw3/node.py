@@ -141,9 +141,15 @@ def recv(sock):
         print("Received OP_RENAME in node.py")
         reply = packets.new_packet(OP_RENAME_R)
         reply['rename'] = filesystem.rename(packet['old'],packet['new'])
-        print("Sending OP_RENAME in node.py")
+        print("Sending OP_RENAME_R in node.py")
         sock.send(packets.build(reply))
 
+    elif packet['opcode'] == OP_DELETE:
+        print("Received OP_DELETE in node.py")
+        reply = packets.new_packet(OP_DELETE_R)
+        reply['delete'] = filesystem.unlink(packet['path'])
+        print("Sending OP_DELETE_R in node.py")
+        sock.send(packets.build(reply))
     else:
         print('Invalid opcode')
 

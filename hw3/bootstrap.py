@@ -78,6 +78,12 @@ def recv(conn):
         del files[packet['old']]
         print('Renamed file')
 
+    elif packet['opcode'] == OP_DELETE:
+        print('Received OP_DELETE', packet)
+        print('files', files)
+        del files[packet['path']]
+        print('Deleted file')
+
     elif packet['opcode'] == OP_BYE:
         print('Received OP_LEAVE', packet)
         print('nodes are: ', nodes)
