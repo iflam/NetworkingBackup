@@ -108,6 +108,7 @@ def setup_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port", nargs='?', type=int, default=1234, help="port of bootstrap")
     parser.add_argument("-t", "--tier", choices=["basic", "hash", "repl"], help="DiFUSE hw tier")
+    parser.add_argument("-ip", nargs='?',help="ip of bootsrap",default="127.0.0.1",type=str)
     args = parser.parse_args()
     print(args)
 
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     setup_args()
     intro()
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(("127.0.0.1", args.port))
+    sock.bind((args.ip, args.port))
     sock.listen(1) # listen for nodes
     sock.setblocking(False)
     sel.register(sock, selectors.EVENT_READ, accept) 

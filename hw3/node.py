@@ -161,6 +161,8 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT,sigint_handler)
     setup_args()
     print(args)
+    if args.ip:
+        bootstrap_ip = args.ip
     intro()
     join()
     print("Starting FUSE...")
