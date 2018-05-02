@@ -60,7 +60,7 @@ def join():
     temp_sock = socks.tcp_sock() # only a temp sock is required to join network
     temp_sock.connect((bootstrap_ip, args.port))
     print('connected to bootstrap', temp_sock)
-    packet = packets.join_packet(listen_sock.getsockname())
+    packet = packets.join_packet(socket.gethostbyname(socket.gethostname()))
     print('Sending join request', packet)
     temp_sock.send(packets.build(packet))
     #TODO: recv ack?
