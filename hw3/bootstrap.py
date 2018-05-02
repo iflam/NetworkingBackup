@@ -144,7 +144,7 @@ if __name__ == "__main__":
     intro()
     signal.signal(signal.SIGINT,sigint_handler)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind((args.ip, args.port))
+    sock.bind(('0.0.0.0', args.port))
     sock.listen(1) # listen for nodes
     sock.setblocking(False)
     sel.register(sock, selectors.EVENT_READ, accept) 
