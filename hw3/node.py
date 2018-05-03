@@ -200,8 +200,6 @@ if __name__ == "__main__":
     print(args)
     if args.ip:
         bootstrap_ip = args.ip
-    intro()
-    join()
     print("Starting FUSE...")
     #logging.basicConfig(level=logging.DEBUG)
     print(os.path.exists(args.mount))
@@ -211,6 +209,8 @@ if __name__ == "__main__":
         except:
             print("Directory " + args.mount + " is already mounted. Please unmount and try again.")
             sys.exit(0)
+    intro()
+    join()
     t = threading.Thread(target=fuse_thread, name='fuse_thread')
     t.setDaemon(True)
     t.start()
