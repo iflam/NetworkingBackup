@@ -61,7 +61,7 @@ def join():
     try:
         temp_sock.connect((bootstrap_ip, args.port))
     except:
-        print("Could not connect to " + bootstrap_ip + " on port " + args.port)
+        print("Could not connect to " + str(bootstrap_ip) + " on port " + str(args.port))
         sys.exit(0)
     print('connected to bootstrap', temp_sock)
     packet = packets.join_packet(socket.gethostbyname(socket.gethostname()))
