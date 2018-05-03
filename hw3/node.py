@@ -64,7 +64,7 @@ def join():
         print("Could not connect to " + str(bootstrap_ip) + " on port " + str(args.port))
         sys.exit(0)
     print('connected to bootstrap', temp_sock)
-    packet = packets.join_packet(socket.gethostbyname(socket.gethostname()))
+    packet = packets.join_packet((socket.gethostbyname(socket.gethostname()),listen_sock.getsockname()[1]))
     print('Sending join request', packet)
     temp_sock.send(packets.build(packet))
     #TODO: recv ack?

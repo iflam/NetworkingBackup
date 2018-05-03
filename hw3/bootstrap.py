@@ -50,6 +50,7 @@ def recv(conn):
         print('Invalid packet: opcode missing')
 
     if packet['opcode'] == OP_JOIN:
+        print("FLOOPLEDYDOOOO",packet)
         nodes.append(packet['loc'])
 
     elif packet['opcode'] == OP_LS:
