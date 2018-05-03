@@ -205,10 +205,12 @@ if __name__ == "__main__":
     print("Starting FUSE...")
     #logging.basicConfig(level=logging.DEBUG)
     print(os.path.exists(args.mount))
-    try:
-        os.makedirs(args.mount)
-    except:
-        pass
+    if not os.path.exists(args.mount):
+        try:
+            os.makedirs(args.mount)
+        except:
+            print("Directory " + args.mount + " is already mounted. Please unmount and try again.")
+            sys.exit(0)
     t = threading.Thread(target=fuse_thread, name='fuse_thread')
     t.setDaemon(True)
     t.start()
