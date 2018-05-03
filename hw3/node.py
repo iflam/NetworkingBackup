@@ -189,7 +189,6 @@ def fuse_thread():
 def sigint_handler(signal2,frame):
     print("SIGINT~~~~~~~~~~~~~~")
     leave()
-    print("got back to here")
     #LEAVE HERE???
     os.kill(os.getpid(),signal.SIGKILL)
     sys.exit(0)
@@ -202,12 +201,11 @@ if __name__ == "__main__":
         bootstrap_ip = args.ip
     print("Starting FUSE...")
     #logging.basicConfig(level=logging.DEBUG)
-    print(os.path.exists(args.mount))
     if not os.path.exists(args.mount):
         try:
             os.makedirs(args.mount)
         except:
-            print("Directory " + args.mount + " is already mounted. Please unmount and try again.")
+            print("\033[91m Directory " + args.mount + " is already mounted. Please unmount and try again.")
             print("To unmount, maybe try \033[1m $fusermount -uz " + args.mount)
             sys.exit(0)
     intro()
