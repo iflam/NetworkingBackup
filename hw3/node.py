@@ -205,7 +205,7 @@ if __name__ == "__main__":
         try:
             os.makedirs(args.mount)
         except:
-            print("\033[91m Directory " + args.mount + " is already mounted. Please unmount and try again.")
+            print("\033[91m"+"Directory " + args.mount + " is already mounted. Please unmount and try again.")
             print("To unmount, maybe try \033[1m $fusermount -uz " + args.mount)
             sys.exit(0)
     intro()
