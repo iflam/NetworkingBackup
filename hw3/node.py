@@ -58,7 +58,11 @@ def join():
     listen_sock = socks.listen_sock() 
     listen_sock.setblocking(False)
     temp_sock = socks.tcp_sock() # only a temp sock is required to join network
-    temp_sock.connect((bootstrap_ip, args.port))
+    try:
+        temp_sock.connect((bootstrap_ip, args.port))
+    except:
+        print("Could not connect to " + bootstrap_ip + " on port " + args.port)
+        sys.exit(0)
     print('connected to bootstrap', temp_sock)
     packet = packets.join_packet(socket.gethostbyname(socket.gethostname()))
     print('Sending join request', packet)
@@ -128,8 +132,22 @@ def recv(sock):
     elif packet['opcode'] == OP_WRITE:
         print("Received OP_WRITE in node.py")
         reply = packets.new_packet(OP_WRITE_R)
-        reply['datalen'] = filesystem.write(packet['path'],packet['data'],packet['offset'],packet['fh'])
+        reply['datalen'] = filesystem.write(packet['path'],packet['data'].encode(),packet['offset'],packet['fh'])
         print('Sending OP_WRITE_R with ', reply['datalen'])
+        sock.send(packets.build(reply))
+
+    elif packet['opcode'] == OP_TRUNC:
+        print("Received OP_TRUNC in node.py")
+        reply = packets.new_packet(OP_TRUNC_R)
+        reply['trunc'] = filesystem.truncate(packet['path'],packet['length'])
+        print('Sending OP_TRUNC_R with', reply['trunc'])
+        sock.send(packets.build(reply))
+
+    elif packet['opcode'] == OP_GETXATTR:
+        print("Received OP_GETXATTR in nodde.py")
+        reply = packets.new_packet(OP_GETXATTR_R)
+        reply['getxattr'] = filesystem.getxattr(packet['path'],packet['name'])
+        print('Sending OP_GETXATTR_R with', reply['getxattr'])
         sock.send(packets.build(reply))
 
     elif packet['opcode'] == OP_LEAVE:

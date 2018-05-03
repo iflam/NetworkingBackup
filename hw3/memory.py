@@ -107,14 +107,39 @@ class Memory(LoggingMixIn, Operations):
         return self.files[path]
 
     def getxattr(self, path, name, position=0):
-        attrs = self.files[path].get('attrs', {})
-
-        try:
-            return attrs[name]
-        except KeyError:
-            return ''       # Should return ENOATTR
+        if path not in self.files:
+            print("GETXATTR in other location")
+            packet = packets.new_packet(OP_FIND) # ask bootstrap - find location of file
+            packet['path'] = path
+            print('Sending OP_FIND for GETXATTR', packet)
+            sock = socks.tcp_sock()
+            sock.connect(self.bootstrap)
+            sock.send(packets.build(packet))
+            reply = packets.unpack(sock.recv(MAX_READ))
+            print('Received OP_FIND_R for GETXATTR', reply)
+            if 'loc' not in reply:
+                raise FuseOSError(ENOENT)
+            loc = tuple(reply['loc'])
+            tcp_sock = socks.tcp_sock() 
+            tcp_sock.connect(loc) # connect to other node
+            packet = packets.new_packet(OP_GETXATTR)
+            packet['path'] = path
+            packet['name'] = name
+            print('Sending OP_GETXATTR', packet)
+            tcp_sock.send(packets.build(packet)) # send syscall 
+            reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
+            print('Received OP_GETXATTR_R', reply)
+            if reply['getxattr']:
+                return reply['getxattr']
+        else:
+            attrs = self.files[path].get('attrs', {})
+            try:
+                return attrs[name]
+            except KeyError:
+                return ''       # Should return ENOATTR
 
     def listxattr(self, path):
+        print("HOOPLA")
         attrs = self.files[path].get('attrs', {})
         return attrs.keys()
 
@@ -250,10 +275,33 @@ class Memory(LoggingMixIn, Operations):
         self.data[target] = source
 
     def truncate(self, path, length, fh=None):
+        if path not in self.files:
+            print("Truncate in other location")
+            packet = packets.new_packet(OP_FIND) # ask bootstrap - find location of file
+            packet['path'] = path
+            print('Sending OP_FIND for TRUNCATE', packet)
+            sock = socks.tcp_sock()
+            sock.connect(self.bootstrap)
+            sock.send(packets.build(packet))
+            reply = packets.unpack(sock.recv(MAX_READ))
+            print('Received OP_FIND_R for TRUNCATE', reply)
+            if 'loc' not in reply:
+                raise FuseOSError(ENOENT)
+            loc = tuple(reply['loc'])
+            tcp_sock = socks.tcp_sock() 
+            tcp_sock.connect(loc) # connect to other node
+            packet = packets.new_packet(OP_TRUNC)
+            packet['path'] = path
+            packet['length'] = length
+            print('Sending OP_TRUNCATE', packet)
+            tcp_sock.send(packets.build(packet)) # send syscall 
+            reply = packets.unpack(tcp_sock.recv(MAX_READ)) # TODO: listen for reply in select
+            print('Received OP_TRUNCATE_R', reply)
+        else:
         # make sure extending the file fills in zero bytes
-        self.data[path] = self.data[path][:length].ljust(
-            length, b'\x00'.decode())
-        self.files[path]['st_size'] = length
+            self.data[path] = self.data[path][:length].ljust(
+                length, b'\x00'.decode())
+            self.files[path]['st_size'] = length
 
     def unlink(self, path):
         print("In Unlink")
@@ -314,7 +362,7 @@ class Memory(LoggingMixIn, Operations):
             tcp_sock.connect(loc) # connect to other node
             packet = packets.new_packet(OP_WRITE)
             packet['path'] = path
-            packet['data'] = data
+            packet['data'] = data.decode()
             packet['offset'] = offset
             packet['fh'] = fh
             print('Sending OP_WRITE', packet)
