@@ -132,7 +132,10 @@ def sigint_handler(signal,frame):
     for n in nodes:
         print(tuple(n))
         tcp_sock = socks.tcp_sock() 
-        tcp_sock.connect(tuple(n))
+        try:
+            tcp_sock.connect(tuple(n))
+        except:
+            continue
         msg = packets.new_packet(OP_LEAVE)
         tcp_sock.send(packets.build(msg))
         tcp_sock.close()
